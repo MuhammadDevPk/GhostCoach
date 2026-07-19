@@ -1,8 +1,9 @@
 <script setup>
-import { ref, onMounted, nextTick, computed } from 'vue';
+import { ref, onMounted, nextTick, computed, onBeforeUnmount } from 'vue';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 import { sendChatMessage } from './services/ai';
+import { SpeechToText } from './services/voice';
 
 // Expose Pusher to window as required by Laravel Echo
 window.Pusher = Pusher;
@@ -49,6 +50,12 @@ const connectionState = ref('disconnected'); // 'connected' | 'connecting' | 'di
 const feedContainer = ref(null);
 const fontSize = ref(15);
 
+// Voice STT state variables
+const isMicListening = ref(false);
+const voiceInterimText = ref('');
+const voiceFinalText = ref('');
+let sttInstance = null;
+
 // Active Echo instance pointer
 let echoInstance = null;
 
@@ -87,8 +94,30 @@ onMounted(() => {
     fontSize.value = parseInt(savedFontSize) || 15;
   }
 
+  // Setup Speech-to-Text Instance for manual toggle-to-record transcription
+  sttInstance = new SpeechToText({
+    onTranscript: (text) => {
+      handleVoiceInputFinalized(text);
+    },
+    onStatusChange: (status) => {
+      isMicListening.value = status;
+    },
+    onError: (errMessage) => {
+      console.error('STT Error:', errMessage);
+      handleIncomingMessage(`Voice Error: ${errMessage}`, true);
+      voiceInterimText.value = '';
+    }
+  });
+
   connectEcho();
 });
+
+onBeforeUnmount(() => {
+  if (sttInstance) {
+    sttInstance.stop();
+  }
+});
+
 
 function increaseFont() {
   if (fontSize.value < 32) {
@@ -259,6 +288,39 @@ function toggleChatInput() {
       feedContainer.value.scrollTop = feedContainer.value.scrollHeight;
     }
   });
+}
+
+// Toggle microphone audio transcription
+function toggleMic() {
+  if (!sttInstance) return;
+  if (isMicListening.value) {
+    voiceInterimText.value = 'Transcribing...';
+    sttInstance.stop().then(() => {
+      voiceInterimText.value = '';
+    });
+  } else {
+    // Extract active provider and API keys for transcription
+    const provider = aiSettings.value.provider;
+    const geminiKey = aiSettings.value.geminiKey;
+    const groqKey = aiSettings.value.groqKey;
+    const geminiModel = aiSettings.value.geminiModel;
+
+    voiceInterimText.value = 'Recording voice... Click mic again to stop.';
+    sttInstance.start({ provider, geminiKey, groqKey, geminiModel })
+      .catch(err => {
+        console.error('Failed to start voice recognition:', err);
+        handleIncomingMessage(`Voice Error: ${err.message}`, true);
+        voiceInterimText.value = '';
+      });
+  }
+}
+
+// Handle voice capture finalized event
+function handleVoiceInputFinalized(text) {
+  voiceInterimText.value = '';
+  if (!text) return;
+  // Fill the input area with transcribed text for the user to review/edit
+  newQuestion.value = text;
 }
 
 // Send query to AI provider
@@ -489,13 +551,35 @@ function closeApp() {
           <span>Thinking...</span>
         </div>
       </div>
+
+      <!-- Interim Voice Preview Overlay -->
+      <div v-if="voiceInterimText" class="voice-interim-preview">
+        <span class="pulse-dot-recording"></span>
+        <span class="preview-label">Voice Capture:</span>
+        <span class="preview-text">{{ voiceInterimText }}</span>
+      </div>
     </main>
 
     <!-- Bottom Chat Input Bar -->
     <footer v-if="showChatInput" class="chat-input-bar">
+      <!-- Microphone Button -->
+      <button 
+        class="btn-icon btn-mic" 
+        :class="{ 'recording': isMicListening }" 
+        @click="toggleMic" 
+        :title="isMicListening ? 'Stop Voice Detection' : 'Start Voice Detection'"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+      </button>
+
       <textarea
         v-model="newQuestion"
-        placeholder="Ask AI Coach..."
+        placeholder="Ask AI Coach or speak..."
         @keydown.enter.exact.prevent="sendQuestion"
         rows="1"
       ></textarea>

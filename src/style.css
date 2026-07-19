@@ -610,3 +610,75 @@ body {
   animation: fade-in 0.2s ease-out;
 }
 
+/* Microphone Button Styling */
+.btn-mic {
+  color: var(--text-muted);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  background: transparent;
+}
+
+.btn-mic:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+}
+
+.btn-mic.recording {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.25);
+  animation: recording-glow 1.5s infinite ease-in-out;
+}
+
+@keyframes recording-glow {
+  0%, 100% { box-shadow: 0 0 4px rgba(239, 68, 68, 0.2); }
+  50% { box-shadow: 0 0 14px rgba(239, 68, 68, 0.5); }
+}
+
+/* Hearing Transcription live preview banner */
+.voice-interim-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(20, 20, 30, 0.45);
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 4px;
+  animation: fade-in 0.2s ease-out;
+  align-self: stretch;
+}
+
+.pulse-dot-recording {
+  width: 7px;
+  height: 7px;
+  background-color: #ef4444;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #ef4444;
+  animation: pulse-red-recording 1.2s infinite ease-in-out;
+  flex-shrink: 0;
+}
+
+@keyframes pulse-red-recording {
+  0% { transform: scale(0.9); opacity: 0.5; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 0 5px rgba(239, 68, 68, 0); }
+  100% { transform: scale(0.9); opacity: 0.5; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.preview-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #ef4444;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.preview-text {
+  font-size: 13px;
+  color: var(--text-main);
+  font-style: italic;
+  word-break: break-word;
+}
+
+
