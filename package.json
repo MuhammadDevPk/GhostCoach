@@ -1,0 +1,43 @@
+{
+  "name": "ghost-coach",
+  "productName": "Ghost Coach",
+  "version": "1.0.0",
+  "description": "Ghost Coach Application",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently -k \"npm run dev:vite\" \"npm run dev:electron\"",
+    "dev:vite": "vite",
+    "dev:electron": "wait-on http://localhost:5173 && electron electron/main.js",
+    "build": "vite build",
+    "preview": "vite preview",
+    "build:mac": "npm run build && electron-builder --mac"
+  },
+  "dependencies": {
+    "laravel-echo": "^1.16.1",
+    "pusher-js": "^8.4.0-rc2",
+    "vue": "^3.4.21"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "concurrently": "^8.2.2",
+    "electron": "^29.1.0",
+    "electron-builder": "^26.15.3",
+    "vite": "^5.1.4",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.ghostcoach.app",
+    "productName": "Ghost Coach",
+    "mac": {
+      "target": [
+        "dir",
+        "zip"
+      ],
+      "category": "public.app-category.utilities"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ]
+  }
+}

@@ -1,0 +1,388 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg-transparent: rgba(18, 18, 24, 0.65);
+  --bg-card: rgba(30, 30, 38, 0.55);
+  --bg-input: rgba(10, 10, 15, 0.4);
+  --border-color: rgba(255, 255, 255, 0.09);
+  --border-focus: rgba(0, 240, 255, 0.4);
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
+  --text-accent: #38bdf8;
+  
+  --status-connected: #10b981;
+  --status-connecting: #f59e0b;
+  --status-disconnected: #ef4444;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: transparent;
+  color: var(--text-main);
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#app {
+  height: 100%;
+  width: 100%;
+}
+
+/* Master Glass Container */
+.app-container {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-transparent);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.7);
+  transition: border-color 0.3s ease;
+}
+
+/* Custom Header / Draggable Area */
+.app-header {
+  height: 48px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(10, 10, 12, 0.25);
+  -webkit-app-region: drag; /* Makes the header draggable in Electron */
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  -webkit-app-region: no-drag; /* Restores mouse clickability on controls */
+}
+
+/* Status Indicator Dot */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  position: relative;
+  transition: background-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+.status-dot.connected {
+  background-color: var(--status-connected);
+  box-shadow: 0 0 8px var(--status-connected);
+  animation: pulse-green 2s infinite;
+}
+
+.status-dot.connecting {
+  background-color: var(--status-connecting);
+  box-shadow: 0 0 8px var(--status-connecting);
+  animation: pulse-orange 1.5s infinite;
+}
+
+.status-dot.disconnected {
+  background-color: var(--status-disconnected);
+  box-shadow: 0 0 8px var(--status-disconnected);
+  animation: pulse-red 1s infinite;
+}
+
+/* Action Buttons (Settings, Minimize, Close) */
+.btn-icon {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-icon:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+}
+
+.btn-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+/* Prompt Feed Layout */
+.feed-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scroll-behavior: smooth;
+}
+
+/* Scrollbar Customization */
+.feed-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.feed-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.feed-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.feed-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Message Bubbles */
+.message-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 14px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: slide-in-bubble 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.message-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-main);
+  user-select: text; /* Allow interviewer to highlight text if needed */
+  word-break: break-word;
+  white-space: pre-wrap; /* Preserves newlines, spaces, and tabs */
+}
+
+.message-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.message-label {
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--text-accent);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* Latest Message Card Highlight */
+.message-card.is-latest {
+  border-color: rgba(16, 185, 129, 0.45);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(30, 30, 38, 0.7) 100%);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.18), inset 0 0 8px rgba(16, 185, 129, 0.05);
+}
+
+.message-card.is-latest .message-text {
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.message-card.is-latest .message-label {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399; /* Parrot green */
+}
+
+/* Empty State */
+.feed-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  gap: 12px;
+  text-align: center;
+  padding: 24px;
+}
+
+.feed-empty svg {
+  opacity: 0.4;
+  animation: float 4s ease-in-out infinite;
+}
+
+.feed-empty p {
+  font-size: 13px;
+}
+
+/* Settings Overlay */
+.settings-overlay {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  width: 100%;
+  height: calc(100% - 48px);
+  background: rgba(18, 18, 22, 0.85);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-radius: 0 0 16px 16px;
+  animation: fade-in 0.25s ease-out;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.settings-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+}
+
+.settings-form::-webkit-scrollbar {
+  width: 4px;
+}
+
+.settings-form::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.form-group input {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: var(--font-sans);
+  color: var(--text-main);
+  font-size: 13px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.form-group input:focus {
+  border-color: var(--text-accent);
+  box-shadow: 0 0 0 2px var(--border-focus);
+  background: rgba(20, 20, 30, 0.6);
+}
+
+.btn-primary {
+  background: #38bdf8;
+  color: #0f172a;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  margin-top: 8px;
+}
+
+.btn-primary:hover {
+  background: #7dd3fc;
+}
+
+/* Animations */
+@keyframes pulse-green {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+@keyframes pulse-orange {
+  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
+  70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
+@keyframes pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 110, 0.5); }
+  70% { box-shadow: 0 0 0 6px rgba(239, 68, 110, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 110, 0); }
+}
+
+@keyframes slide-in-bubble {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+  100% { transform: translateY(0px); }
+}
