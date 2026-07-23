@@ -23,7 +23,14 @@ vi.mock('../services/voice', () => ({
 
 // Mock AI service
 vi.mock('../services/ai', () => ({
-  sendChatMessage: vi.fn().mockResolvedValue('Mocked AI Answer')
+  sendChatMessage: vi.fn().mockResolvedValue({
+    text: 'Mocked AI Answer',
+    usage: {
+      promptTokens: 10,
+      completionTokens: 20,
+      totalTokens: 30
+    }
+  })
 }));
 
 // Mock Echo & Pusher

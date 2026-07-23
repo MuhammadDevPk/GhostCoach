@@ -53,6 +53,7 @@ const messages = ref([]);
 const chatHistory = ref([]);
 const newQuestion = ref('');
 const isLoading = ref(false);
+const totalSessionTokens = ref(0);
 
 const connectionState = ref('disconnected'); // 'connected' | 'connecting' | 'disconnected'
 const fontSize = ref(15);
@@ -275,6 +276,7 @@ function sendLocalTestPrompt() {
 function clearMessages() {
   messages.value = [];
   chatHistory.value = [];
+  totalSessionTokens.value = 0;
 }
 
 // Delete a single message and update LLM context history accordingly
@@ -376,7 +378,7 @@ async function sendQuestion() {
   isLoading.value = true;
 
   try {
-    const responseText = await sendChatMessage({
+    const aiResult = await sendChatMessage({
       provider,
       apiKey,
       model: modelName,
@@ -386,13 +388,23 @@ async function sendQuestion() {
       resumeText: aiSettings.value.resumeText
     });
 
-    const replyTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const responseText = aiResult.text;
+    const usage = aiResult.usage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
 
-    // Add AI response to UI
+    // Accumulate total tokens used in this session
+    totalSessionTokens.value += usage.totalTokens;
+
+    // Update corresponding user message's display metadata to show prompt tokens
+    const userMsg = [...messages.value].reverse().find(m => m.isUser);
+    if (userMsg) {
+      userMsg.time = `${usage.promptTokens}`;
+    }
+
+    // Add AI response to UI, showing completion tokens and total session tokens
     messages.value.push({
       id: 'ai-' + Date.now() + Math.random().toString(36).substr(2, 9),
       text: responseText,
-      time: replyTimestamp,
+      time: `${usage.completionTokens}/${totalSessionTokens.value}`,
       label: 'AI Guide',
       isAi: true
     });
