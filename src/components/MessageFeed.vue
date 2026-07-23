@@ -33,7 +33,7 @@ const props = defineProps({
   }
 });
 
-defineEmits(['send-local-test-prompt']);
+defineEmits(['send-local-test-prompt', 'delete-message']);
 
 const feedContainer = ref(null);
 
@@ -65,7 +65,7 @@ onMounted(() => {
       <p v-if="activeMode === 'ai'">AI Guidance mode active. Ask your coach a question below!</p>
       <p v-else>No prompt notifications received yet.</p>
       <p style="font-size: 11px; opacity: 0.8;">
-        <span v-if="activeMode !== 'ai'">
+         <span v-if="activeMode !== 'ai'">
           Listening on <strong>{{ settings.host }}:{{ settings.port }}</strong><br>
           Channel: <em>{{ settings.channel }}</em>
         </span>
@@ -92,6 +92,7 @@ onMounted(() => {
         :msg="msg"
         :is-latest="index === messages.length - 1"
         :font-size="fontSize"
+        @delete="$emit('delete-message', $event)"
       />
     </template>
 

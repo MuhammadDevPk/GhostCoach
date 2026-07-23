@@ -29,6 +29,7 @@ const decodedText = computed(() => {
   txt.innerHTML = escapedString;
   return txt.value;
 });
+const emit = defineEmits(['delete']);
 </script>
 
 <template>
@@ -59,6 +60,14 @@ const decodedText = computed(() => {
         {{ msg.label }}
       </span>
       <span>{{ msg.time }}</span>
+      <button 
+        class="btn-delete-msg" 
+        @click="emit('delete', msg.id)" 
+        title="Delete message from history"
+        type="button"
+      >
+        ✕
+      </button>
     </div>
   </div>
 </template>

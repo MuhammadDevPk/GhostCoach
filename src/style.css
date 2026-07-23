@@ -1,10 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --bg-transparent: rgba(18, 18, 24, 0.65);
-  --bg-card: rgba(30, 30, 38, 0.55);
-  --bg-input: rgba(10, 10, 15, 0.4);
-  --border-color: rgba(255, 255, 255, 0.09);
+  --bg-transparent: #0e0e12;
+  --bg-card: #191922;
+  --bg-input: #070709;
+  --border-color: rgba(255, 255, 255, 0.08);
   --border-focus: rgba(0, 240, 255, 0.4);
   --text-main: #f3f4f6;
   --text-muted: #9ca3af;
@@ -47,8 +47,6 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--bg-transparent);
-  backdrop-filter: blur(24px) saturate(190%);
-  -webkit-backdrop-filter: blur(24px) saturate(190%);
   border: 1px solid var(--border-color);
   border-radius: 16px;
   overflow: hidden;
@@ -255,8 +253,7 @@ body {
   left: 0;
   width: 100%;
   height: calc(100% - 48px);
-  background: rgba(18, 18, 22, 0.85);
-  backdrop-filter: blur(12px);
+  background: #0e0e12;
   z-index: 100;
   padding: 20px;
   display: flex;
@@ -399,9 +396,8 @@ body {
   align-items: center;
   gap: 10px;
   padding: 10px 16px;
-  background: rgba(10, 10, 15, 0.6);
+  background: #09090c;
   border-top: 1px solid var(--border-color);
-  backdrop-filter: blur(12px);
   -webkit-app-region: no-drag;
 }
 
@@ -679,6 +675,29 @@ body {
   color: var(--text-main);
   font-style: italic;
   word-break: break-word;
+}
+
+.btn-delete-msg {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  margin-left: auto;
+  padding: 2px 6px;
+  opacity: 0;
+  transition: opacity 0.2s, color 0.2s, background-color 0.2s;
+  border-radius: 4px;
+}
+
+.message-card:hover .btn-delete-msg {
+  opacity: 0.7;
+}
+
+.btn-delete-msg:hover {
+  opacity: 1 !important;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
 }
 
 

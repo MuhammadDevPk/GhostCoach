@@ -21,7 +21,7 @@ describe('MessageCard.vue', () => {
 
     expect(wrapper.find('.message-text').text()).toBe('Hello World');
     expect(wrapper.find('.message-label').text()).toBe('Remote Broadcast');
-    expect(wrapper.find('.message-meta span:last-child').text()).toBe('12:00:00 PM');
+    expect(wrapper.find('.message-meta span:nth-of-type(2)').text()).toBe('12:00:00 PM');
   });
 
   it('applies correct CSS class for user messages', () => {
@@ -98,5 +98,19 @@ describe('MessageCard.vue', () => {
 
     // v-html renders innerHTML so we check the element text
     expect(wrapper.find('.message-text').text()).toBe('Hello & Welcome');
+  });
+
+  it('emits delete event with message id when delete button is clicked', async () => {
+    const wrapper = mount(MessageCard, {
+      props: {
+        msg: defaultMsg,
+        fontSize: 15,
+        isLatest: false
+      }
+    });
+
+    await wrapper.find('.btn-delete-msg').trigger('click');
+    expect(wrapper.emitted().delete).toBeTruthy();
+    expect(wrapper.emitted().delete[0]).toEqual([defaultMsg.id]);
   });
 });

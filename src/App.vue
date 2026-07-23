@@ -277,6 +277,18 @@ function clearMessages() {
   chatHistory.value = [];
 }
 
+// Delete a single message and update LLM context history accordingly
+function deleteMessage(messageId) {
+  messages.value = messages.value.filter(m => m.id !== messageId);
+  // Rebuild chat history from the remaining user and AI messages in the feed
+  chatHistory.value = messages.value
+    .filter(m => m.isUser || m.isAi)
+    .map(m => ({
+      role: m.isUser ? 'user' : 'assistant',
+      content: m.text
+    }));
+}
+
 // Toggle bottom chat input
 function toggleChatInput() {
   showChatInput.value = !showChatInput.value;
@@ -449,6 +461,7 @@ function closeApp() {
       :is-loading="isLoading"
       :voice-interim-text="voiceInterimText"
       @send-local-test-prompt="sendLocalTestPrompt"
+      @delete-message="deleteMessage"
     />
 
     <ChatInput
