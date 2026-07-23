@@ -36,7 +36,10 @@ const DEFAULT_AI_SETTINGS = {
   groqKey: '',
   openrouterKey: '',
   githubKey: '',
-  systemInstruction: 'your role is to answer human like interview questions. I will share questions and you will only provide interview answers. and nothing more.'
+  systemInstruction: 'your role is to answer human like interview questions. I will share questions and you will only provide interview answers. and nothing more.',
+  persona: '',
+  resumeText: '',
+  resumeFileName: ''
 };
 
 // Application reactive states
@@ -366,7 +369,9 @@ async function sendQuestion() {
       apiKey,
       model: modelName,
       systemInstruction: aiSettings.value.systemInstruction,
-      history: chatHistory.value
+      history: chatHistory.value,
+      persona: aiSettings.value.persona,
+      resumeText: aiSettings.value.resumeText
     });
 
     const replyTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });

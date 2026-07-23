@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch } from 'vue';
+import { parseResumeFile } from '../services/fileParser';
 
 const props = defineProps({
   settings: {
@@ -28,6 +29,36 @@ const emit = defineEmits([
 ]);
 
 const activeSettingsTab = ref('websocket');
+const isFileParsing = ref(false);
+
+const handleFileUpload = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Protect token counts and latency by restricting uploads to 5MB
+  if (file.size > 5 * 1024 * 1024) {
+    alert('Resume file exceeds the 5MB size limit.');
+    return;
+  }
+
+  isFileParsing.value = true;
+  try {
+    const text = await parseResumeFile(file);
+    localAiSettings.value.resumeText = text;
+    localAiSettings.value.resumeFileName = file.name;
+  } catch (err) {
+    console.error(err);
+    alert('Parsing error: ' + err.message);
+  } finally {
+    isFileParsing.value = false;
+    event.target.value = ''; // Reset input element
+  }
+};
+
+const clearResume = () => {
+  localAiSettings.value.resumeText = '';
+  localAiSettings.value.resumeFileName = '';
+};
 
 // Clone props locally to avoid direct prop mutation (Anti-pattern in Vue)
 const localSettings = ref(JSON.parse(JSON.stringify(props.settings)));
@@ -70,21 +101,29 @@ const handleSave = () => {
 
     <!-- Tab Navigation -->
     <div class="settings-tabs">
-      <button 
-        class="tab-btn" 
-        :class="{ 'active': activeSettingsTab === 'websocket' }" 
+      <button
+        class="tab-btn"
+        :class="{ 'active': activeSettingsTab === 'websocket' }"
         @click="activeSettingsTab = 'websocket'"
         type="button"
       >
         WebSocket Config
       </button>
-      <button 
-        class="tab-btn" 
-        :class="{ 'active': activeSettingsTab === 'ai' }" 
+      <button
+        class="tab-btn"
+        :class="{ 'active': activeSettingsTab === 'ai' }"
         @click="activeSettingsTab = 'ai'"
         type="button"
       >
         AI Guidance
+      </button>
+      <button
+        class="tab-btn"
+        :class="{ 'active': activeSettingsTab === 'candidate' }"
+        @click="activeSettingsTab = 'candidate'"
+        type="button"
+      >
+        Candidate Profile
       </button>
     </div>
 
@@ -190,12 +229,59 @@ const handleSave = () => {
 
         <div class="form-group">
           <label>AI Guidance Instructions (System Prompt)</label>
-          <textarea 
-            v-model="localAiSettings.systemInstruction" 
-            class="form-textarea" 
-            rows="4" 
+          <textarea
+            v-model="localAiSettings.systemInstruction"
+            class="form-textarea"
+            rows="4"
             placeholder="e.g. your role is to answer human like interview questions..."
           ></textarea>
+        </div>
+      </template>
+
+      <!-- Candidate Profile Tab Contents -->
+      <template v-else-if="activeSettingsTab === 'candidate'">
+        <div class="form-group">
+          <label>Your Persona / Interview Persona</label>
+          <textarea
+            v-model="localAiSettings.persona"
+            class="form-textarea"
+            rows="4"
+            placeholder="e.g. You are Haider. Speak in a human-like, conversational tone. Be clear and structural..."
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Upload Resume (.txt, .pdf, .docx)</label>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <input
+              type="file"
+              accept=".txt,.pdf,.docx"
+              @change="handleFileUpload"
+              :disabled="isFileParsing"
+              style="display: none;"
+              id="resume-file-input"
+            />
+            <label
+              for="resume-file-input"
+              class="btn-primary"
+              style="display: inline-block; text-align: center; cursor: pointer; padding: 10px; margin: 0; background: var(--border-color); color: var(--text-main);"
+            >
+              {{ isFileParsing ? 'Parsing Resume...' : 'Choose File' }}
+            </label>
+
+            <div v-if="localAiSettings.resumeFileName" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-input); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+              <span style="font-size: 12px; color: var(--text-main); word-break: break-all;">
+                📄 {{ localAiSettings.resumeFileName }}
+              </span>
+              <button
+                @click="clearResume"
+                type="button"
+                style="background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 11px; font-weight: bold;"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
         </div>
       </template>
 

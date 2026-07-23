@@ -12,20 +12,32 @@
  * @param {Array<{role: string, content: string}>} params.history - The conversation history
  * @returns {Promise<string>} The response text from the AI
  */
-export async function sendChatMessage({ provider, apiKey, model, systemInstruction, history }) {
+export async function sendChatMessage({ provider, apiKey, model, systemInstruction, history, persona, resumeText }) {
   if (!apiKey) {
     throw new Error('API Key is required to call the AI provider.');
   }
 
+  // Compile the "Super Prompt" combining the base instructions with persona and resume context
+  let compiledInstructions = systemInstruction || '';
+  if (persona || resumeText) {
+    compiledInstructions += '\n\n=== CANDIDATE PROFILE ===';
+    if (persona) {
+      compiledInstructions += `\n\nCandidate Persona (Tone & Role):\n${persona}`;
+    }
+    if (resumeText) {
+      compiledInstructions += `\n\nCandidate Resume / Experience:\n${resumeText}`;
+    }
+  }
+
   switch (provider) {
     case 'gemini':
-      return callGeminiAPI({ apiKey, model, systemInstruction, history });
+      return callGeminiAPI({ apiKey, model, systemInstruction: compiledInstructions, history });
     case 'groq':
-      return callGroqAPI({ apiKey, model, systemInstruction, history });
+      return callGroqAPI({ apiKey, model, systemInstruction: compiledInstructions, history });
     case 'openrouter':
-      return callOpenRouterAPI({ apiKey, model, systemInstruction, history });
+      return callOpenRouterAPI({ apiKey, model, systemInstruction: compiledInstructions, history });
     case 'github':
-      return callGitHubAPI({ apiKey, model, systemInstruction, history });
+      return callGitHubAPI({ apiKey, model, systemInstruction: compiledInstructions, history });
     default:
       throw new Error(`Unsupported AI Provider: ${provider}`);
   }
