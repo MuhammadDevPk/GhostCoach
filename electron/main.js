@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, globalShortcut } = require('electron');
 const path = require('path');
 
 // Force the OS process name to override the default Electron metadata string
@@ -75,9 +75,33 @@ function createWindow() {
 app.whenReady().then(() => {
   createWindow();
 
+  // Register show/hide toggle shortcut (Cmd+H / Ctrl+H)
+  globalShortcut.register('CommandOrControl+H', () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    }
+  });
+
+  // Register toggle record/transcribe shortcut (Cmd+Shift+L / Ctrl+Shift+L)
+  globalShortcut.register('CommandOrControl+Shift+L', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('toggle-record');
+    }
+  });
+
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+});
+
+app.on('will-quit', () => {
+  // Clean up all registered global shortcuts to avoid key hijacking on exit
+  globalShortcut.unregisterAll();
 });
 
 app.on('window-all-closed', function () {

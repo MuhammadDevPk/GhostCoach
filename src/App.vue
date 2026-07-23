@@ -116,6 +116,13 @@ onMounted(() => {
     }
   });
 
+  // Listen for global shortcut record toggle from main process
+  if (window.electronAPI && typeof window.electronAPI.onToggleRecord === 'function') {
+    window.electronAPI.onToggleRecord(() => {
+      toggleMic();
+    });
+  }
+
   connectEcho();
 });
 
