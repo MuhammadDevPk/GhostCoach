@@ -42,8 +42,8 @@ function createWindow() {
     resizable: true,
     minWidth: 300,
     minHeight: 400,
-    maxWidth: 600,
-    maxHeight: 1000,
+    maxWidth: 2100,
+    maxHeight: 1300,
     hasShadow: false, // Let CSS glassmorphism styles specify custom shadow glow
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
