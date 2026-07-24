@@ -18,6 +18,7 @@ const textRef = ref(null);
 
 const scrollPosition = ref(0);
 const bgColor = ref('#191922');
+const bgOpacity = ref(0.95);
 const localText = ref(props.text);
 let animationFrameId = null;
 
@@ -58,8 +59,9 @@ onMounted(() => {
     try {
       const parsed = JSON.parse(savedSettings);
       bgColor.value = parsed.teleprompterBgColor || '#191922';
+      bgOpacity.value = parsed.teleprompterBgOpacity !== undefined ? parsed.teleprompterBgOpacity : 0.95;
     } catch (e) {
-      console.error('Failed to parse settings for teleprompter background color', e);
+      console.error('Failed to parse settings for teleprompter background styling', e);
     }
   }
 
@@ -91,8 +93,9 @@ function handleStorageChange(e) {
     try {
       const parsed = JSON.parse(e.newValue);
       bgColor.value = parsed.teleprompterBgColor || '#191922';
+      bgOpacity.value = parsed.teleprompterBgOpacity !== undefined ? parsed.teleprompterBgOpacity : 0.95;
     } catch (err) {
-      console.error('Failed to parse storage update for teleprompter background color', err);
+      console.error('Failed to parse storage update for teleprompter background styling', err);
     }
   }
 }
@@ -150,7 +153,8 @@ const timeRemaining = computed(() => {
 </script>
 
 <template>
-  <div class="teleprompter-overlay" :style="{ backgroundColor: bgColor }">
+  <div class="teleprompter-overlay">
+    <div class="teleprompter-bg-overlay" :style="{ backgroundColor: bgColor, opacity: bgOpacity }"></div>
     <div class="teleprompter-banner" ref="containerRef">
       <div 
         class="teleprompter-text" 

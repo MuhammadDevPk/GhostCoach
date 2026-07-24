@@ -302,6 +302,10 @@ const handleSave = () => {
             <span style="font-family: monospace; font-size: 13px; color: var(--text-muted);">{{ localSettings.appBgColor || '#0e0e12' }}</span>
           </div>
         </div>
+        <div class="form-group">
+          <label>Main App Background Opacity ({{ Math.round((localSettings.appBgOpacity ?? 1.0) * 100) }}%)</label>
+          <input v-model.number="localSettings.appBgOpacity" type="range" min="0" max="1" step="0.05" style="width: 100%; height: 6px; border-radius: 3px; accent-color: var(--accent-color); cursor: pointer;" />
+        </div>
 
         <div class="form-group">
           <label>Teleprompter Background Color</label>
@@ -309,6 +313,10 @@ const handleSave = () => {
             <input v-model="localSettings.teleprompterBgColor" type="color" style="width: 50px; height: 32px; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; background: transparent; padding: 0;" />
             <span style="font-family: monospace; font-size: 13px; color: var(--text-muted);">{{ localSettings.teleprompterBgColor || '#191922' }}</span>
           </div>
+        </div>
+        <div class="form-group">
+          <label>Teleprompter Background Opacity ({{ Math.round((localSettings.teleprompterBgOpacity ?? 0.95) * 100) }}%)</label>
+          <input v-model.number="localSettings.teleprompterBgOpacity" type="range" min="0" max="1" step="0.05" style="width: 100%; height: 6px; border-radius: 3px; accent-color: var(--accent-color); cursor: pointer;" />
         </div>
       </template>
 

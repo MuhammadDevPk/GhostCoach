@@ -46,12 +46,13 @@ body {
   width: 100vw;
   display: flex;
   flex-direction: column;
-  background: var(--bg-transparent);
+  background: transparent !important; /* Make container base transparent */
   border: 1px solid var(--border-color);
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.7);
   transition: border-color 0.3s ease;
+  position: relative;
 }
 
 /* Custom Header / Draggable Area */
@@ -713,13 +714,25 @@ body {
   position: relative;
 }
 
+.app-bg-overlay,
+.teleprompter-bg-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
 .teleprompter-overlay {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(14, 14, 18, 0.96);
+  background: transparent; /* Make base transparent to support overlay background */
   display: flex;
   flex-direction: column;
   align-items: center;

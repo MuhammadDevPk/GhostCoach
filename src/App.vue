@@ -24,7 +24,9 @@ const DEFAULT_SETTINGS = {
   channel: 'interview',
   event: '.guidance.created', // Prepend dot to listen to custom event literally (prevents Echo namespace prefixing)
   appBgColor: '#0e0e12',
-  teleprompterBgColor: '#191922'
+  appBgOpacity: 1.0,
+  teleprompterBgColor: '#191922',
+  teleprompterBgOpacity: 0.95
 };
 
 // Define default AI settings
@@ -571,7 +573,8 @@ function closeApp() {
       @close="closeTeleprompterWindow"
     />
   </div>
-  <div v-else class="app-container" :style="{ backgroundColor: settings.appBgColor || '#0e0e12' }">
+  <div v-else class="app-container">
+    <div class="app-bg-overlay" :style="{ backgroundColor: settings.appBgColor || '#0e0e12', opacity: settings.appBgOpacity !== undefined ? settings.appBgOpacity : 1.0 }"></div>
     <AppHeader
       :connection-state="connectionState"
       :font-size="fontSize"
