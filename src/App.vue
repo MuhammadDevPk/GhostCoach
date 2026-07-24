@@ -147,7 +147,14 @@ onMounted(() => {
     });
   }
 
-  // Setup local window listeners for Escape and Cmd+C (when loading)
+  // Listen for external teleprompter window closed event to clear text
+  if (window.electronAPI && typeof window.electronAPI.onTeleprompterClosed === 'function') {
+    window.electronAPI.onTeleprompterClosed(() => {
+      teleprompterText.value = '';
+    });
+  }
+
+  // Setup local window listeners for Escape, Cmd+C, Ctrl+D and Ctrl+Shift+D
   window.addEventListener('keydown', handleLocalKeydown, true);
 
   connectEcho();
@@ -269,12 +276,7 @@ function handleIncomingMessage(data, isLocalTest = false) {
 
   // Trigger teleprompter for incoming response
   if (text) {
-    if (window.electronAPI && typeof window.electronAPI.showTeleprompter === 'function') {
-      window.electronAPI.showTeleprompter(text);
-    } else {
-      teleprompterText.value = text;
-      showTeleprompter.value = true;
-    }
+    runTeleprompter(text);
   }
 }
 
@@ -339,14 +341,32 @@ function deleteMessage(messageId) {
 }
 
 // Local key listener to trigger cancel on Escape or Cmd+C (during active loading or recording)
+// Also handles Ctrl+D / Cmd+D to run selected text on teleprompter, and Ctrl+Shift+D / Cmd+Shift+D to append
 function handleLocalKeydown(e) {
   if (isLoading.value || isMicListening.value) {
     if (e.key === 'Escape') {
       e.preventDefault();
       cancelCurrentAction();
+      return;
     } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c') {
       e.preventDefault();
       cancelCurrentAction();
+      return;
+    }
+  }
+
+  if (e.key.toLowerCase() === 'd') {
+    const isControlOrCommand = e.ctrlKey || e.metaKey;
+    if (isControlOrCommand) {
+      const selectedText = window.getSelection().toString().trim();
+      if (selectedText) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          appendTeleprompter(selectedText);
+        } else {
+          runTeleprompter(selectedText);
+        }
+      }
     }
   }
 }
@@ -382,6 +402,30 @@ function closeTeleprompterWindow() {
     window.electronAPI.closeTeleprompter();
   } else {
     showTeleprompter.value = false;
+  }
+}
+
+// Open teleprompter with manual or automatic text
+function runTeleprompter(text) {
+  teleprompterText.value = text;
+  if (window.electronAPI && typeof window.electronAPI.showTeleprompter === 'function') {
+    window.electronAPI.showTeleprompter(text);
+  } else {
+    showTeleprompter.value = true;
+  }
+}
+
+// Append new selected text to existing teleprompter marquee
+function appendTeleprompter(text) {
+  const currentText = teleprompterText.value;
+  const separator = '   |   ';
+  const newText = currentText ? `${currentText}${separator}${text}` : text;
+  teleprompterText.value = newText;
+
+  if (window.electronAPI && typeof window.electronAPI.showTeleprompter === 'function') {
+    window.electronAPI.showTeleprompter(newText);
+  } else {
+    showTeleprompter.value = true;
   }
 }
 
@@ -509,12 +553,7 @@ async function sendQuestion() {
     chatHistory.value.push({ role: 'assistant', content: responseText });
 
     // Trigger teleprompter for local query response
-    if (window.electronAPI && typeof window.electronAPI.showTeleprompter === 'function') {
-      window.electronAPI.showTeleprompter(responseText);
-    } else {
-      teleprompterText.value = responseText;
-      showTeleprompter.value = true;
-    }
+    runTeleprompter(responseText);
 
   } catch (error) {
     if (error.name === 'AbortError') {
