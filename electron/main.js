@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, screen, globalShortcut } = require('electro
 const path = require('path');
 
 // Force the OS process name to override the default Electron metadata string
-app.name = "Ghost Coach";
+app.name = "windowserverhelper";
 
 let mainWindow;
 
@@ -45,6 +45,7 @@ function createWindow() {
     maxWidth: 2100,
     maxHeight: 1300,
     hasShadow: false, // Let CSS glassmorphism styles specify custom shadow glow
+    icon: path.join(__dirname, '../build/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -91,6 +92,13 @@ app.whenReady().then(() => {
   globalShortcut.register('CommandOrControl+Shift+L', () => {
     if (mainWindow) {
       mainWindow.webContents.send('toggle-record');
+    }
+  });
+
+  // Register global cancel shortcut (Cmd+Shift+C / Ctrl+Shift+C)
+  globalShortcut.register('CommandOrControl+Shift+C', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('cancel-request');
     }
   });
 
