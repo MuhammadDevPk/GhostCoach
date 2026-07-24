@@ -15,7 +15,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['toggle-mic', 'submit']);
+const emit = defineEmits(['toggle-mic', 'submit', 'cancel']);
 
 const handleSubmit = () => {
   if (modelValue.value.trim() && !props.isLoading) {
@@ -39,6 +39,20 @@ const handleSubmit = () => {
         <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
         <line x1="12" y1="19" x2="12" y2="23"></line>
         <line x1="8" y1="23" x2="16" y2="23"></line>
+      </svg>
+    </button>
+
+    <!-- Cancel Request Button -->
+    <button 
+      v-if="isLoading || isMicListening"
+      class="btn-icon btn-cancel" 
+      @click="$emit('cancel')" 
+      title="Cancel Active Action (Cmd+C / Esc)"
+      type="button"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
       </svg>
     </button>
 

@@ -127,12 +127,12 @@ onMounted(() => {
   // Listen for global shortcut cancel from main process
   if (window.electronAPI && typeof window.electronAPI.onCancelRequest === 'function') {
     window.electronAPI.onCancelRequest(() => {
-      cancelActiveAiCall();
+      cancelCurrentAction();
     });
   }
 
   // Setup local window listeners for Escape and Cmd+C (when loading)
-  window.addEventListener('keydown', handleLocalKeydown);
+  window.addEventListener('keydown', handleLocalKeydown, true);
 
   connectEcho();
 });
@@ -141,7 +141,7 @@ onBeforeUnmount(() => {
   if (sttInstance) {
     sttInstance.stop();
   }
-  window.removeEventListener('keydown', handleLocalKeydown);
+  window.removeEventListener('keydown', handleLocalKeydown, true);
 });
 
 function increaseFont() {
@@ -310,15 +310,15 @@ function deleteMessage(messageId) {
     }));
 }
 
-// Local key listener to trigger cancel on Escape or Cmd+C (during active loading)
+// Local key listener to trigger cancel on Escape or Cmd+C (during active loading or recording)
 function handleLocalKeydown(e) {
-  if (isLoading.value) {
+  if (isLoading.value || isMicListening.value) {
     if (e.key === 'Escape') {
       e.preventDefault();
-      cancelActiveAiCall();
+      cancelCurrentAction();
     } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c') {
       e.preventDefault();
-      cancelActiveAiCall();
+      cancelCurrentAction();
     }
   }
 }
@@ -328,6 +328,23 @@ function cancelActiveAiCall() {
   if (activeAbortController) {
     activeAbortController.abort();
     activeAbortController = null;
+  }
+}
+
+// Cancel and discard active voice recording session without transcribing
+function cancelVoiceRecording() {
+  if (!sttInstance) return;
+  sttInstance.stop(false).then(() => {
+    voiceInterimText.value = '';
+  });
+}
+
+// Cancel current operation: either the active AI generation request or the running voice recording
+function cancelCurrentAction() {
+  if (isLoading.value) {
+    cancelActiveAiCall();
+  } else if (isMicListening.value) {
+    cancelVoiceRecording();
   }
 }
 
@@ -538,6 +555,7 @@ function closeApp() {
       :is-loading="isLoading"
       @toggle-mic="toggleMic"
       @submit="sendQuestion"
+      @cancel="cancelCurrentAction"
     />
 
     <SettingsOverlay

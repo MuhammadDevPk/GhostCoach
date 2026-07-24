@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, globalShortcut, systemPreferences } = require('electron');
 const path = require('path');
 
 // Force the OS process name to override the default Electron metadata string
@@ -74,6 +74,15 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  // Request microphone access on macOS immediately on startup
+  if (process.platform === 'darwin') {
+    systemPreferences.askForMediaAccess('microphone').then(granted => {
+      console.log('Microphone access granted:', granted);
+    }).catch(err => {
+      console.error('Failed to request microphone access:', err);
+    });
+  }
+
   createWindow();
 
   // Register show/hide toggle shortcut (Cmd+H / Ctrl+H)

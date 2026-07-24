@@ -134,6 +134,11 @@ body {
   color: var(--text-main);
 }
 
+.btn-cancel:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444 !important;
+}
+
 .btn-close:hover {
   background: rgba(239, 68, 68, 0.2);
   color: #ef4444;
