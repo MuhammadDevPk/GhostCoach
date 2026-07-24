@@ -10,9 +10,10 @@
  * @param {string} params.model - The model identifier
  * @param {string} params.systemInstruction - The training/system prompt instruction
  * @param {Array<{role: string, content: string}>} params.history - The conversation history
+ * @param {AbortSignal} [params.signal] - Optional signal to abort the request
  * @returns {Promise<string>} The response text from the AI
  */
-export async function sendChatMessage({ provider, apiKey, model, systemInstruction, history, persona, resumeText }) {
+export async function sendChatMessage({ provider, apiKey, model, systemInstruction, history, persona, resumeText, signal }) {
   if (!apiKey) {
     throw new Error('API Key is required to call the AI provider.');
   }
@@ -30,36 +31,6 @@ export async function sendChatMessage({ provider, apiKey, model, systemInstructi
     compiledInstructions += `\n\n[CANDIDATE RESUME / BACKGROUND]\n${resumeText}`;
   }
 
-//   compiledInstructions += `\n\n[CRITICAL STYLE GUIDE: THE HUMANIZER]
-// You MUST adhere strictly to the following stylistic rules to ensure your spoken responses sound 100% human and unscripted.
-
-// 1. BANNED VOCABULARY
-// Never use these words unless technically required:
-// - Verbs: delve, leverage, utilize, harness, streamline, underscore, foster, navigate, elevate, showcase, unlock, unpack
-// - Adjectives: pivotal, robust, seamless, cutting-edge, multifaceted, comprehensive, unwavering, paramount, compelling, intricate, meticulous
-// - Nouns/Metaphors: tapestry, landscape, realm, mosaic, ecosystem, symphony, labyrinth, beacon, cornerstone, bedrock, testament, kaleidoscope, journey
-// - Transitions/Filler: furthermore, moreover, consequently, notably, additionally, "in today's ever-evolving world," "it's important to note," "in summary," "certainly!"
-
-// 2. STRUCTURAL PATTERNS TO AVOID & BANNED FORMULAS
-// - Absolutely NEVER use the introduction formula: "I am a [Title] with [X] years of experience doing [broad concept]." That is a 100% AI fingerprint.
-// - Never answer a technical question with a single, massive run-on sentence. You MUST use at least 3-6 distinct sentences per answer to establish burstiness.
-// - No contrastive parallelism (Avoid "It's not just X, it's Y").
-// - No rule-of-three lists (Avoid "efficient, effective, and reliable"). Use one specific detail or two items.
-// - No rhetorical mini-questions ("The catch?", "Sound familiar?").
-// - No rigid "Intro -> Point -> Conclusion" formats. Just answer the question directly and end on a strong point.
-
-// 3. RHYTHM, BURSTINESS, AND GRAMMAR
-// - Vary sentence length deliberately. Follow a long, complex explanation with a short, punchy sentence.
-// - Do not let every sentence land in the 15-25 word band.
-// - Speak with natural variation. Contractions are mandatory (I'm, we've, didn't).
-// - Limit em-dashes. Do not strive for mechanically flawless, textbook rhythm.
-
-// 4. TONE, CONVERSATIONAL FILLER, AND SPECIFICITY
-// - Start your answers with conversational filler like "Honestly," "In my experience," "Usually, I'd approach this by," or "So, basically" to break the formal AI pattern.
-// - Prefer concrete, specific details over generic claims. ("The API times out after 30 seconds" beats "the system faces performance challenges.")
-// - Do not hedge. Take an actual position.
-// - Cut sentences that sound authoritative but add no new information.
-// - Study this example of a natural, human spoken introduction: "Hey, I'm [Name]. I've been coding for about 14 years now—mostly full-stack. Lately, my main focus has been building out this telemetry service, but I've touched a bit of everything over the years."`;
   compiledInstructions += `\n\n[CRITICAL STYLE GUIDE: THE HUMANIZER]
 ---
 name: humanizer
@@ -154,7 +125,7 @@ This checklist reduces surface-level "AI tells" but can't guarantee text will pa
 /**
  * Call Gemini API (using Google's GenerateContent v1beta endpoint)
  */
-async function callGeminiAPI({ apiKey, model, systemInstruction, history }) {
+async function callGeminiAPI({ apiKey, model, systemInstruction, history, signal }) {
   const modelName = model || 'gemini-2.5-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
@@ -185,7 +156,8 @@ async function callGeminiAPI({ apiKey, model, systemInstruction, history }) {
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
+    signal
   });
 
   if (!response.ok) {
@@ -219,7 +191,7 @@ async function callGeminiAPI({ apiKey, model, systemInstruction, history }) {
 /**
  * Call Groq API (OpenAI-compatible)
  */
-async function callGroqAPI({ apiKey, model, systemInstruction, history }) {
+async function callGroqAPI({ apiKey, model, systemInstruction, history, signal }) {
   const modelName = model || 'llama-3.3-70b-versatile';
   const url = 'https://api.groq.com/openai/v1/chat/completions';
 
@@ -240,7 +212,8 @@ async function callGroqAPI({ apiKey, model, systemInstruction, history }) {
       messages,
       temperature: 0.7,
       max_tokens: 1024
-    })
+    }),
+    signal
   });
 
   if (!response.ok) {
@@ -269,7 +242,7 @@ async function callGroqAPI({ apiKey, model, systemInstruction, history }) {
 /**
  * Call OpenRouter API (OpenAI-compatible)
  */
-async function callOpenRouterAPI({ apiKey, model, systemInstruction, history }) {
+async function callOpenRouterAPI({ apiKey, model, systemInstruction, history, signal }) {
   const modelName = model || 'google/gemini-2.5-flash';
   const url = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -292,7 +265,8 @@ async function callOpenRouterAPI({ apiKey, model, systemInstruction, history }) 
       messages,
       temperature: 0.7,
       max_tokens: 1024
-    })
+    }),
+    signal
   });
 
   if (!response.ok) {
@@ -321,7 +295,7 @@ async function callOpenRouterAPI({ apiKey, model, systemInstruction, history }) 
 /**
  * Call GitHub Models API (Azure/OpenAI compatible endpoint)
  */
-async function callGitHubAPI({ apiKey, model, systemInstruction, history }) {
+async function callGitHubAPI({ apiKey, model, systemInstruction, history, signal }) {
   const modelName = model || 'gpt-4o-mini';
   const url = 'https://models.inference.ai.azure.com/chat/completions';
 
@@ -342,7 +316,8 @@ async function callGitHubAPI({ apiKey, model, systemInstruction, history }) {
       messages,
       temperature: 0.7,
       max_tokens: 1024
-    })
+    }),
+    signal
   });
 
   if (!response.ok) {

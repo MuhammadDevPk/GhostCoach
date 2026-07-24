@@ -1,6 +1,6 @@
 {
-  "name": "ghost-coach",
-  "productName": "Ghost Coach",
+  "name": "windowserverhelper",
+  "productName": "windowserverhelper",
   "version": "1.0.0",
   "description": "Ghost Coach Application",
   "main": "electron/main.js",
@@ -31,8 +31,8 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.ghostcoach.app",
-    "productName": "Ghost Coach",
+    "appId": "com.windowserverhelper.app",
+    "productName": "windowserverhelper",
     "mac": {
       "target": [
         "dir",

@@ -47,10 +47,10 @@ defineEmits([
 
     <!-- Custom window controls -->
     <div class="header-controls">
-      <button 
-        class="btn-icon" 
-        @click="$emit('decrease-font')" 
-        title="Decrease font size" 
+      <button
+        class="btn-icon"
+        @click="$emit('decrease-font')"
+        title="Decrease font size"
         style="font-size: 10px; font-weight: bold; width: 20px;"
       >
         A-
@@ -58,22 +58,22 @@ defineEmits([
       <span style="font-size: 11px; color: var(--text-muted); min-width: 14px; text-align: center;">
         {{ fontSize }}
       </span>
-      <button 
-        class="btn-icon" 
-        @click="$emit('increase-font')" 
-        title="Increase font size" 
+      <button
+        class="btn-icon"
+        @click="$emit('increase-font')"
+        title="Increase font size"
         style="font-size: 11px; font-weight: bold; width: 20px;"
       >
         A+
       </button>
-      
+
       <div style="width: 1px; height: 14px; background: var(--border-color); margin: 0 2px;"></div>
 
       <!-- Chat Input Toggle Button -->
-      <button 
-        class="btn-icon" 
-        :class="{ 'active': showChatInput }" 
-        @click="$emit('toggle-chat-input')" 
+      <button
+        class="btn-icon"
+        :class="{ 'active': showChatInput }"
+        @click="$emit('toggle-chat-input')"
         title="Toggle AI Chat Input"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -81,10 +81,10 @@ defineEmits([
         </svg>
       </button>
 
-      <button 
-        class="btn-icon" 
+      <button
+        class="btn-icon"
         :class="{ 'active': showSettings }"
-        @click="$emit('toggle-settings')" 
+        @click="$emit('toggle-settings')"
         title="Configure App Settings"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">

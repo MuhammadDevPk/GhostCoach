@@ -45,7 +45,7 @@ const handleSubmit = () => {
     <textarea
       v-model="modelValue"
       placeholder="Ask AI Coach or speak..."
-      @keydown.enter.exact.prevent="$emit('submit')"
+      @keydown.enter.exact.prevent="handleSubmit"
       rows="1"
     ></textarea>
     

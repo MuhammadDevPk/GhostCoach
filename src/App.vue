@@ -54,6 +54,7 @@ const chatHistory = ref([]);
 const newQuestion = ref('');
 const isLoading = ref(false);
 const totalSessionTokens = ref(0);
+let activeAbortController = null;
 
 const connectionState = ref('disconnected'); // 'connected' | 'connecting' | 'disconnected'
 const fontSize = ref(15);
@@ -123,6 +124,16 @@ onMounted(() => {
     });
   }
 
+  // Listen for global shortcut cancel from main process
+  if (window.electronAPI && typeof window.electronAPI.onCancelRequest === 'function') {
+    window.electronAPI.onCancelRequest(() => {
+      cancelActiveAiCall();
+    });
+  }
+
+  // Setup local window listeners for Escape and Cmd+C (when loading)
+  window.addEventListener('keydown', handleLocalKeydown);
+
   connectEcho();
 });
 
@@ -130,6 +141,7 @@ onBeforeUnmount(() => {
   if (sttInstance) {
     sttInstance.stop();
   }
+  window.removeEventListener('keydown', handleLocalKeydown);
 });
 
 function increaseFont() {
@@ -298,6 +310,27 @@ function deleteMessage(messageId) {
     }));
 }
 
+// Local key listener to trigger cancel on Escape or Cmd+C (during active loading)
+function handleLocalKeydown(e) {
+  if (isLoading.value) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelActiveAiCall();
+    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c') {
+      e.preventDefault();
+      cancelActiveAiCall();
+    }
+  }
+}
+
+// Cancel the active AI request using AbortController
+function cancelActiveAiCall() {
+  if (activeAbortController) {
+    activeAbortController.abort();
+    activeAbortController = null;
+  }
+}
+
 // Toggle bottom chat input
 function toggleChatInput() {
   showChatInput.value = !showChatInput.value;
@@ -383,6 +416,7 @@ async function sendQuestion() {
   chatHistory.value.push({ role: 'user', content: query });
 
   isLoading.value = true;
+  activeAbortController = new AbortController();
 
   try {
     const aiResult = await sendChatMessage({
@@ -392,7 +426,8 @@ async function sendQuestion() {
       systemInstruction: aiSettings.value.systemInstruction,
       history: chatHistory.value,
       persona: aiSettings.value.persona,
-      resumeText: aiSettings.value.resumeText
+      resumeText: aiSettings.value.resumeText,
+      signal: activeAbortController.signal
     });
 
     const responseText = aiResult.text;
@@ -420,21 +455,34 @@ async function sendQuestion() {
     chatHistory.value.push({ role: 'assistant', content: responseText });
 
   } catch (error) {
-    console.error('AI Request Failed:', error);
-    const errTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    
-    messages.value.push({
-      id: 'err-' + Date.now() + Math.random().toString(36).substr(2, 9),
-      text: `Error calling AI: ${error.message || error}`,
-      time: errTimestamp,
-      label: 'AI Error',
-      isError: true
-    });
+    if (error.name === 'AbortError') {
+      messages.value.push({
+        id: 'cancel-' + Date.now() + Math.random().toString(36).substr(2, 9),
+        text: 'AI request cancelled.',
+        time: 'cancelled',
+        label: 'System',
+        isError: true
+      });
+      // Remove the failed user prompt from conversation history to avoid corrupted context flow
+      chatHistory.value.pop();
+    } else {
+      console.error('AI Request Failed:', error);
+      const errTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      
+      messages.value.push({
+        id: 'err-' + Date.now() + Math.random().toString(36).substr(2, 9),
+        text: `Error calling AI: ${error.message || error}`,
+        time: errTimestamp,
+        label: 'AI Error',
+        isError: true
+      });
 
-    // Remove the failed user prompt from conversation history to avoid corrupted context flow
-    chatHistory.value.pop();
+      // Remove the failed user prompt from conversation history to avoid corrupted context flow
+      chatHistory.value.pop();
+    }
   } finally {
     isLoading.value = false;
+    activeAbortController = null;
   }
 }
 
