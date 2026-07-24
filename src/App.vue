@@ -10,6 +10,7 @@ import AppHeader from './components/AppHeader.vue';
 import MessageFeed from './components/MessageFeed.vue';
 import ChatInput from './components/ChatInput.vue';
 import SettingsOverlay from './components/SettingsOverlay.vue';
+import Teleprompter from './components/Teleprompter.vue';
 
 // Expose Pusher to window as required by Laravel Echo
 window.Pusher = Pusher;
@@ -21,7 +22,9 @@ const DEFAULT_SETTINGS = {
   appKey: 'datgek4pdi3rxen8drie',
   scheme: 'https',
   channel: 'interview',
-  event: '.guidance.created' // Prepend dot to listen to custom event literally (prevents Echo namespace prefixing)
+  event: '.guidance.created', // Prepend dot to listen to custom event literally (prevents Echo namespace prefixing)
+  appBgColor: '#0e0e12',
+  teleprompterBgColor: '#191922'
 };
 
 // Define default AI settings
@@ -54,6 +57,9 @@ const chatHistory = ref([]);
 const newQuestion = ref('');
 const isLoading = ref(false);
 const totalSessionTokens = ref(0);
+const showTeleprompter = ref(false);
+const teleprompterText = ref('');
+const isTeleprompterMode = window.location.hash === '#/teleprompter';
 let activeAbortController = null;
 
 const connectionState = ref('disconnected'); // 'connected' | 'connecting' | 'disconnected'
@@ -69,6 +75,14 @@ let echoInstance = null;
 
 // Load settings from localStorage and bootstrap connection
 onMounted(() => {
+  if (isTeleprompterMode) {
+    if (window.electronAPI && typeof window.electronAPI.onLoadTeleprompter === 'function') {
+      window.electronAPI.onLoadTeleprompter((text) => {
+        teleprompterText.value = text;
+      });
+    }
+    return; // Don't connect Echo, STT or listeners on the teleprompter window
+  }
   const savedSettings = localStorage.getItem('reverb_settings');
   if (savedSettings) {
     try {
@@ -141,7 +155,9 @@ onBeforeUnmount(() => {
   if (sttInstance) {
     sttInstance.stop();
   }
-  window.removeEventListener('keydown', handleLocalKeydown, true);
+  if (!isTeleprompterMode) {
+    window.removeEventListener('keydown', handleLocalKeydown, true);
+  }
 });
 
 function increaseFont() {
@@ -248,6 +264,16 @@ function handleIncomingMessage(data, isLocalTest = false) {
     time: timestamp,
     label: isLocalTest ? 'Test Mode' : 'Remote Broadcast'
   });
+
+  // Trigger teleprompter for incoming response
+  if (text) {
+    if (window.electronAPI && typeof window.electronAPI.showTeleprompter === 'function') {
+      window.electronAPI.showTeleprompter(text);
+    } else {
+      teleprompterText.value = text;
+      showTeleprompter.value = true;
+    }
+  }
 }
 
 // Save configuration updates and trigger reconnect
@@ -345,6 +371,15 @@ function cancelCurrentAction() {
     cancelActiveAiCall();
   } else if (isMicListening.value) {
     cancelVoiceRecording();
+  }
+}
+
+// Close external or local teleprompter
+function closeTeleprompterWindow() {
+  if (window.electronAPI && typeof window.electronAPI.closeTeleprompter === 'function') {
+    window.electronAPI.closeTeleprompter();
+  } else {
+    showTeleprompter.value = false;
   }
 }
 
@@ -471,6 +506,14 @@ async function sendQuestion() {
     // Append assistant response to context history
     chatHistory.value.push({ role: 'assistant', content: responseText });
 
+    // Trigger teleprompter for local query response
+    if (window.electronAPI && typeof window.electronAPI.showTeleprompter === 'function') {
+      window.electronAPI.showTeleprompter(responseText);
+    } else {
+      teleprompterText.value = responseText;
+      showTeleprompter.value = true;
+    }
+
   } catch (error) {
     if (error.name === 'AbortError') {
       messages.value.push({
@@ -522,7 +565,13 @@ function closeApp() {
 </script>
 
 <template>
-  <div class="app-container">
+  <div v-if="isTeleprompterMode" class="teleprompter-window-wrapper">
+    <Teleprompter
+      :text="teleprompterText"
+      @close="closeTeleprompterWindow"
+    />
+  </div>
+  <div v-else class="app-container" :style="{ backgroundColor: settings.appBgColor || '#0e0e12' }">
     <AppHeader
       :connection-state="connectionState"
       :font-size="fontSize"
@@ -568,6 +617,12 @@ function closeApp() {
       @reset-to-defaults="resetToDefaults"
       @clear-messages="clearMessages"
       @close="showSettings = false"
+    />
+
+    <Teleprompter
+      v-if="showTeleprompter"
+      :text="teleprompterText"
+      @close="closeTeleprompterWindow"
     />
   </div>
 </template>

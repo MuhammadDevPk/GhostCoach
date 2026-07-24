@@ -73,6 +73,58 @@ function createWindow() {
   });
 }
 
+let teleprompterWindow;
+
+function createTeleprompterWindow() {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenWidth } = primaryDisplay.workAreaSize;
+
+  const width = screenWidth - 100;
+  const height = 180;
+  const x = 50;
+  const y = 40;
+
+  teleprompterWindow = new BrowserWindow({
+    width,
+    height,
+    x,
+    y,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: true,
+    hasShadow: false,
+    icon: path.join(__dirname, '../build/icon.png'),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  teleprompterWindow.setContentProtection(true);
+  teleprompterWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+
+  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+  if (isDev) {
+    teleprompterWindow.loadURL('http://localhost:5173/#/teleprompter');
+  } else {
+    teleprompterWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: '/teleprompter' });
+  }
+
+  teleprompterWindow.on('closed', function () {
+    teleprompterWindow = null;
+    // Tell the main window it was closed so it can update state
+    if (mainWindow) {
+      mainWindow.webContents.send('teleprompter:closed');
+    }
+  });
+
+  // Hide it initially
+  teleprompterWindow.hide();
+}
+
 app.whenReady().then(() => {
   // Request microphone access on macOS immediately on startup
   if (process.platform === 'darwin') {
@@ -84,9 +136,22 @@ app.whenReady().then(() => {
   }
 
   createWindow();
+  createTeleprompterWindow();
 
   // Register show/hide toggle shortcut (Cmd+H / Ctrl+H)
   globalShortcut.register('CommandOrControl+H', () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    }
+  });
+
+  // Register fallback show/hide toggle shortcut (Cmd+Shift+H / Ctrl+Shift+H)
+  globalShortcut.register('CommandOrControl+Shift+H', () => {
     if (mainWindow) {
       if (mainWindow.isVisible()) {
         mainWindow.hide();
@@ -112,7 +177,10 @@ app.whenReady().then(() => {
   });
 
   app.on('activate', function () {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+      createTeleprompterWindow();
+    }
   });
 });
 
@@ -130,10 +198,26 @@ app.on('window-all-closed', function () {
 // IPC handlers for custom window controls
 ipcMain.on('window:minimize', () => {
   if (mainWindow) {
-    mainWindow.minimize();
+    // Hide instead of minimize, because dock icon is hidden, making minimized window unreachable
+    mainWindow.hide();
   }
 });
 
 ipcMain.on('window:close', () => {
   app.quit();
+});
+
+// Teleprompter communications
+ipcMain.on('teleprompter:show', (event, text) => {
+  if (!teleprompterWindow) {
+    createTeleprompterWindow();
+  }
+  teleprompterWindow.webContents.send('teleprompter:load', text);
+  teleprompterWindow.show();
+});
+
+ipcMain.on('teleprompter:close', () => {
+  if (teleprompterWindow) {
+    teleprompterWindow.hide();
+  }
 });

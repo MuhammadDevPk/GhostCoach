@@ -705,4 +705,129 @@ body {
   background: rgba(239, 68, 68, 0.15);
 }
 
+/* Teleprompter Overlay & Marquee Banner */
+.teleprompter-window-wrapper {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}
+
+.teleprompter-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(14, 14, 18, 0.96);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  -webkit-app-region: drag; /* Allow window dragging by grabbing background */
+}
+
+.teleprompter-banner {
+  width: 100%;
+  height: 140px;
+  background: #191922;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  -webkit-app-region: no-drag; /* Exclude marquee text container from dragging */
+}
+
+.teleprompter-text {
+  position: absolute;
+  white-space: nowrap;
+  color: #4ade80; /* vibrant green */
+  font-weight: 700;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 10px rgba(74, 222, 128, 0.3);
+}
+
+.teleprompter-toolbar {
+  margin-top: 24px;
+  background: #191922;
+  border: 1px solid var(--border-color);
+  border-radius: 30px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  -webkit-app-region: no-drag; /* Exclude toolbar from dragging */
+}
+
+.toolbar-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-main);
+  font-size: 13px;
+}
+
+.time-indicator {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.value-display {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 38px;
+  text-align: center;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border-color);
+}
+
+.btn-tool {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.btn-tool:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+}
+
+.btn-play {
+  background: var(--accent-color);
+  color: white;
+}
+
+.btn-play:hover {
+  background: var(--accent-hover);
+  color: white;
+  transform: scale(1.05);
+}
+
+.btn-close-tool:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
 

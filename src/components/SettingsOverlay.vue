@@ -125,6 +125,14 @@ const handleSave = () => {
       >
         Candidate Profile
       </button>
+      <button
+        class="tab-btn"
+        :class="{ 'active': activeSettingsTab === 'appearance' }"
+        @click="activeSettingsTab = 'appearance'"
+        type="button"
+      >
+        Appearance
+      </button>
     </div>
 
     <div class="settings-form">
@@ -281,6 +289,25 @@ const handleSave = () => {
                 Remove
               </button>
             </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- Appearance Tab Contents -->
+      <template v-else-if="activeSettingsTab === 'appearance'">
+        <div class="form-group">
+          <label>Main App Background Color</label>
+          <div style="display: flex; align-items: center; gap: 12px; margin-top: 4px;">
+            <input v-model="localSettings.appBgColor" type="color" style="width: 50px; height: 32px; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; background: transparent; padding: 0;" />
+            <span style="font-family: monospace; font-size: 13px; color: var(--text-muted);">{{ localSettings.appBgColor || '#0e0e12' }}</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Teleprompter Background Color</label>
+          <div style="display: flex; align-items: center; gap: 12px; margin-top: 4px;">
+            <input v-model="localSettings.teleprompterBgColor" type="color" style="width: 50px; height: 32px; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; background: transparent; padding: 0;" />
+            <span style="font-family: monospace; font-size: 13px; color: var(--text-muted);">{{ localSettings.teleprompterBgColor || '#191922' }}</span>
           </div>
         </div>
       </template>
