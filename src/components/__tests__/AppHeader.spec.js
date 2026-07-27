@@ -7,7 +7,8 @@ describe('AppHeader.vue', () => {
     connectionState: 'connected',
     fontSize: 15,
     showChatInput: true,
-    showSettings: false
+    showSettings: false,
+    teleprompterEnabled: false
   };
 
   it('renders title and status dot with correct status class', () => {
@@ -75,8 +76,8 @@ describe('AppHeader.vue', () => {
       props: defaultProps
     });
 
-    // Config toggle is the 4th button
-    const configToggleBtn = wrapper.findAll('.btn-icon')[3];
+    // Config toggle is now the 5th button (teleprompter button added at index 3)
+    const configToggleBtn = wrapper.findAll('.btn-icon')[4];
     await configToggleBtn.trigger('click');
 
     expect(wrapper.emitted('toggle-settings')).toBeTruthy();
@@ -87,8 +88,8 @@ describe('AppHeader.vue', () => {
       props: defaultProps
     });
 
-    // Minimize is the 5th button
-    const minBtn = wrapper.findAll('.btn-icon')[4];
+    // Minimize is now the 6th button (teleprompter button added at index 3)
+    const minBtn = wrapper.findAll('.btn-icon')[5];
     await minBtn.trigger('click');
 
     expect(wrapper.emitted('minimize')).toBeTruthy();

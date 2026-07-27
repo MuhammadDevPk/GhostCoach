@@ -26,7 +26,8 @@ const DEFAULT_SETTINGS = {
   appBgColor: '#0e0e12',
   appBgOpacity: 1.0,
   teleprompterBgColor: '#191922',
-  teleprompterBgOpacity: 0.95
+  teleprompterBgOpacity: 0.95,
+  teleprompterEnabled: true  // auto-run on AI replies (can be toggled from header or Settings > Appearance)
 };
 
 // Define default AI settings
@@ -283,8 +284,8 @@ function handleIncomingMessage(data, isLocalTest = false) {
     label: isLocalTest ? 'Test Mode' : 'Remote Broadcast'
   });
 
-  // Trigger teleprompter for incoming response
-  if (text) {
+  // Trigger teleprompter for incoming response (only when auto-run is enabled)
+  if (text && settings.value.teleprompterEnabled) {
     runTeleprompter(text);
   }
 }
@@ -561,8 +562,10 @@ async function sendQuestion() {
     // Append assistant response to context history
     chatHistory.value.push({ role: 'assistant', content: responseText });
 
-    // Trigger teleprompter for local query response
-    runTeleprompter(responseText);
+    // Trigger teleprompter for local query response (only when auto-run is enabled)
+    if (settings.value.teleprompterEnabled) {
+      runTeleprompter(responseText);
+    }
 
   } catch (error) {
     if (error.name === 'AbortError') {
@@ -628,10 +631,12 @@ function closeApp() {
       :font-size="fontSize"
       :show-chat-input="showChatInput"
       :show-settings="showSettings"
+      :teleprompter-enabled="settings.teleprompterEnabled ?? true"
       @decrease-font="decreaseFont"
       @increase-font="increaseFont"
       @toggle-chat-input="toggleChatInput"
       @toggle-settings="showSettings = !showSettings"
+      @toggle-teleprompter="settings.teleprompterEnabled = !settings.teleprompterEnabled"
       @minimize="minimizeApp"
       @close="closeApp"
     />

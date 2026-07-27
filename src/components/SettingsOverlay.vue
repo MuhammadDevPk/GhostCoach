@@ -205,11 +205,11 @@ const handleSave = () => {
             <label>Gemini API Keys</label>
             <div v-for="(key, index) in localAiSettings.geminiKey" :key="index" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
               <input v-model="localAiSettings.geminiKey[index]" type="password" placeholder="AIzaSy..." style="flex: 1;" />
-              <button 
-                v-if="localAiSettings.geminiKey.length > 1" 
-                type="button" 
+              <button
+                v-if="localAiSettings.geminiKey.length > 1"
+                type="button"
                 style="color: #ef4444; background: rgba(239, 68, 68, 0.15); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;"
-                @click="localAiSettings.geminiKey.splice(index, 1)" 
+                @click="localAiSettings.geminiKey.splice(index, 1)"
                 title="Remove API Key"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -218,9 +218,9 @@ const handleSave = () => {
                 </svg>
               </button>
             </div>
-            <button 
-              type="button" 
-              class="btn-primary" 
+            <button
+              type="button"
+              class="btn-primary"
               style="font-size: 11px; padding: 6px 12px; margin-top: 4px; background: rgba(255, 255, 255, 0.08); color: var(--text-main); border: 1px dashed var(--border-color); width: auto;"
               @click="localAiSettings.geminiKey.push('')"
             >
@@ -238,11 +238,11 @@ const handleSave = () => {
             <label>Groq API Keys</label>
             <div v-for="(key, index) in localAiSettings.groqKey" :key="index" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
               <input v-model="localAiSettings.groqKey[index]" type="password" placeholder="gsk_..." style="flex: 1;" />
-              <button 
-                v-if="localAiSettings.groqKey.length > 1" 
-                type="button" 
+              <button
+                v-if="localAiSettings.groqKey.length > 1"
+                type="button"
                 style="color: #ef4444; background: rgba(239, 68, 68, 0.15); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;"
-                @click="localAiSettings.groqKey.splice(index, 1)" 
+                @click="localAiSettings.groqKey.splice(index, 1)"
                 title="Remove API Key"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -251,9 +251,9 @@ const handleSave = () => {
                 </svg>
               </button>
             </div>
-            <button 
-              type="button" 
-              class="btn-primary" 
+            <button
+              type="button"
+              class="btn-primary"
               style="font-size: 11px; padding: 6px 12px; margin-top: 4px; background: rgba(255, 255, 255, 0.08); color: var(--text-main); border: 1px dashed var(--border-color); width: auto;"
               @click="localAiSettings.groqKey.push('')"
             >
@@ -271,11 +271,11 @@ const handleSave = () => {
             <label>OpenRouter API Keys</label>
             <div v-for="(key, index) in localAiSettings.openrouterKey" :key="index" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
               <input v-model="localAiSettings.openrouterKey[index]" type="password" placeholder="sk-or-v1-..." style="flex: 1;" />
-              <button 
-                v-if="localAiSettings.openrouterKey.length > 1" 
-                type="button" 
+              <button
+                v-if="localAiSettings.openrouterKey.length > 1"
+                type="button"
                 style="color: #ef4444; background: rgba(239, 68, 68, 0.15); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;"
-                @click="localAiSettings.openrouterKey.splice(index, 1)" 
+                @click="localAiSettings.openrouterKey.splice(index, 1)"
                 title="Remove API Key"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -284,9 +284,9 @@ const handleSave = () => {
                 </svg>
               </button>
             </div>
-            <button 
-              type="button" 
-              class="btn-primary" 
+            <button
+              type="button"
+              class="btn-primary"
               style="font-size: 11px; padding: 6px 12px; margin-top: 4px; background: rgba(255, 255, 255, 0.08); color: var(--text-main); border: 1px dashed var(--border-color); width: auto;"
               @click="localAiSettings.openrouterKey.push('')"
             >
@@ -304,11 +304,11 @@ const handleSave = () => {
             <label>GitHub Tokens / API Keys</label>
             <div v-for="(key, index) in localAiSettings.githubKey" :key="index" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
               <input v-model="localAiSettings.githubKey[index]" type="password" placeholder="ghp_... or github_pat_..." style="flex: 1;" />
-              <button 
-                v-if="localAiSettings.githubKey.length > 1" 
-                type="button" 
+              <button
+                v-if="localAiSettings.githubKey.length > 1"
+                type="button"
                 style="color: #ef4444; background: rgba(239, 68, 68, 0.15); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;"
-                @click="localAiSettings.githubKey.splice(index, 1)" 
+                @click="localAiSettings.githubKey.splice(index, 1)"
                 title="Remove API Key"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -317,9 +317,9 @@ const handleSave = () => {
                 </svg>
               </button>
             </div>
-            <button 
-              type="button" 
-              class="btn-primary" 
+            <button
+              type="button"
+              class="btn-primary"
               style="font-size: 11px; padding: 6px 12px; margin-top: 4px; background: rgba(255, 255, 255, 0.08); color: var(--text-main); border: 1px dashed var(--border-color); width: auto;"
               @click="localAiSettings.githubKey.push('')"
             >
@@ -392,6 +392,13 @@ const handleSave = () => {
 
       <!-- Appearance Tab Contents -->
       <template v-else-if="activeSettingsTab === 'appearance'">
+        <!-- <div class="form-group">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; font-weight: 500;">
+            <input v-model="localSettings.teleprompterEnabled" type="checkbox" style="width: 16px; height: 16px; accent-color: var(--accent-color); cursor: pointer;" />
+            Enable Teleprompter Auto-Run
+          </label>
+        </div> -->
+
         <div class="form-group">
           <label>Main App Background Color</label>
           <div style="display: flex; align-items: center; gap: 12px; margin-top: 4px;">

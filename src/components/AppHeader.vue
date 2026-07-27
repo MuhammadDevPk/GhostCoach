@@ -16,6 +16,10 @@ defineProps({
   showSettings: {
     type: Boolean,
     required: true
+  },
+  teleprompterEnabled: {
+    type: Boolean,
+    required: true
   }
 });
 
@@ -24,6 +28,7 @@ defineEmits([
   'increase-font',
   'toggle-chat-input',
   'toggle-settings',
+  'toggle-teleprompter',
   'minimize',
   'close'
 ]);
@@ -78,6 +83,19 @@ defineEmits([
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </button>
+
+      <!-- Teleprompter Auto-Run Toggle Button -->
+      <button
+        class="btn-icon"
+        :class="{ 'active': teleprompterEnabled }"
+        @click="$emit('toggle-teleprompter')"
+        title="Toggle Teleprompter Auto-Run (Active on AI Replies)"
+        style="position: relative;"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 12h20M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"></path>
         </svg>
       </button>
 
