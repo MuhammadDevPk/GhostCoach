@@ -65,6 +65,15 @@ const localSettings = ref(JSON.parse(JSON.stringify(props.settings)));
 const localAiSettings = ref(JSON.parse(JSON.stringify(props.aiSettings)));
 const localActiveMode = ref(props.activeMode);
 
+// Ensure key fields are arrays for robust rendering
+['geminiKey', 'groqKey', 'openrouterKey', 'githubKey'].forEach(key => {
+  if (typeof localAiSettings.value[key] === 'string') {
+    localAiSettings.value[key] = localAiSettings.value[key] ? [localAiSettings.value[key]] : [''];
+  } else if (!Array.isArray(localAiSettings.value[key]) || localAiSettings.value[key].length === 0) {
+    localAiSettings.value[key] = [''];
+  }
+});
+
 // Sync local state if external props change
 watch(() => props.settings, (newVal) => {
   localSettings.value = JSON.parse(JSON.stringify(newVal));
@@ -193,8 +202,30 @@ const handleSave = () => {
         <!-- Provider Specific fields -->
         <div v-if="localAiSettings.provider === 'gemini'" class="provider-fields">
           <div class="form-group">
-            <label>Gemini API Key</label>
-            <input v-model="localAiSettings.geminiKey" type="password" placeholder="AIzaSy..." />
+            <label>Gemini API Keys</label>
+            <div v-for="(key, index) in localAiSettings.geminiKey" :key="index" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+              <input v-model="localAiSettings.geminiKey[index]" type="password" placeholder="AIzaSy..." style="flex: 1;" />
+              <button 
+                v-if="localAiSettings.geminiKey.length > 1" 
+                type="button" 
+                style="color: #ef4444; background: rgba(239, 68, 68, 0.15); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;"
+                @click="localAiSettings.geminiKey.splice(index, 1)" 
+                title="Remove API Key"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+            <button 
+              type="button" 
+              class="btn-primary" 
+              style="font-size: 11px; padding: 6px 12px; margin-top: 4px; background: rgba(255, 255, 255, 0.08); color: var(--text-main); border: 1px dashed var(--border-color); width: auto;"
+              @click="localAiSettings.geminiKey.push('')"
+            >
+              + Add API Key
+            </button>
           </div>
           <div class="form-group">
             <label>Model Name</label>
@@ -204,8 +235,30 @@ const handleSave = () => {
 
         <div v-else-if="localAiSettings.provider === 'groq'" class="provider-fields">
           <div class="form-group">
-            <label>Groq API Key</label>
-            <input v-model="localAiSettings.groqKey" type="password" placeholder="gsk_..." />
+            <label>Groq API Keys</label>
+            <div v-for="(key, index) in localAiSettings.groqKey" :key="index" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+              <input v-model="localAiSettings.groqKey[index]" type="password" placeholder="gsk_..." style="flex: 1;" />
+              <button 
+                v-if="localAiSettings.groqKey.length > 1" 
+                type="button" 
+                style="color: #ef4444; background: rgba(239, 68, 68, 0.15); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;"
+                @click="localAiSettings.groqKey.splice(index, 1)" 
+                title="Remove API Key"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+            <button 
+              type="button" 
+              class="btn-primary" 
+              style="font-size: 11px; padding: 6px 12px; margin-top: 4px; background: rgba(255, 255, 255, 0.08); color: var(--text-main); border: 1px dashed var(--border-color); width: auto;"
+              @click="localAiSettings.groqKey.push('')"
+            >
+              + Add API Key
+            </button>
           </div>
           <div class="form-group">
             <label>Model Name</label>
@@ -215,8 +268,30 @@ const handleSave = () => {
 
         <div v-else-if="localAiSettings.provider === 'openrouter'" class="provider-fields">
           <div class="form-group">
-            <label>OpenRouter API Key</label>
-            <input v-model="localAiSettings.openrouterKey" type="password" placeholder="sk-or-v1-..." />
+            <label>OpenRouter API Keys</label>
+            <div v-for="(key, index) in localAiSettings.openrouterKey" :key="index" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+              <input v-model="localAiSettings.openrouterKey[index]" type="password" placeholder="sk-or-v1-..." style="flex: 1;" />
+              <button 
+                v-if="localAiSettings.openrouterKey.length > 1" 
+                type="button" 
+                style="color: #ef4444; background: rgba(239, 68, 68, 0.15); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;"
+                @click="localAiSettings.openrouterKey.splice(index, 1)" 
+                title="Remove API Key"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+            <button 
+              type="button" 
+              class="btn-primary" 
+              style="font-size: 11px; padding: 6px 12px; margin-top: 4px; background: rgba(255, 255, 255, 0.08); color: var(--text-main); border: 1px dashed var(--border-color); width: auto;"
+              @click="localAiSettings.openrouterKey.push('')"
+            >
+              + Add API Key
+            </button>
           </div>
           <div class="form-group">
             <label>Model Name</label>
@@ -226,8 +301,30 @@ const handleSave = () => {
 
         <div v-else-if="localAiSettings.provider === 'github'" class="provider-fields">
           <div class="form-group">
-            <label>GitHub Token</label>
-            <input v-model="localAiSettings.githubKey" type="password" placeholder="ghp_... or github_pat_..." />
+            <label>GitHub Tokens / API Keys</label>
+            <div v-for="(key, index) in localAiSettings.githubKey" :key="index" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+              <input v-model="localAiSettings.githubKey[index]" type="password" placeholder="ghp_... or github_pat_..." style="flex: 1;" />
+              <button 
+                v-if="localAiSettings.githubKey.length > 1" 
+                type="button" 
+                style="color: #ef4444; background: rgba(239, 68, 68, 0.15); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;"
+                @click="localAiSettings.githubKey.splice(index, 1)" 
+                title="Remove API Key"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+            <button 
+              type="button" 
+              class="btn-primary" 
+              style="font-size: 11px; padding: 6px 12px; margin-top: 4px; background: rgba(255, 255, 255, 0.08); color: var(--text-main); border: 1px dashed var(--border-color); width: auto;"
+              @click="localAiSettings.githubKey.push('')"
+            >
+              + Add API Key
+            </button>
           </div>
           <div class="form-group">
             <label>Model Name</label>

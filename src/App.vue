@@ -37,10 +37,10 @@ const DEFAULT_AI_SETTINGS = {
   groqModel: 'llama-3.3-70b-versatile',
   openrouterModel: 'google/gemini-2.5-flash',
   githubModel: 'gpt-4o-mini',
-  geminiKey: '',
-  groqKey: '',
-  openrouterKey: '',
-  githubKey: '',
+  geminiKey: [''],
+  groqKey: [''],
+  openrouterKey: [''],
+  githubKey: [''],
   systemInstruction: 'your role is to answer human like interview questions. I will share questions and you will only provide interview answers. and nothing more.',
   persona: '',
   resumeText: '',
@@ -102,6 +102,15 @@ onMounted(() => {
       console.error('Failed to parse saved AI settings', e);
     }
   }
+
+  // Normalize string keys into arrays for rotation compatibility
+  ['geminiKey', 'groqKey', 'openrouterKey', 'githubKey'].forEach(key => {
+    if (typeof aiSettings.value[key] === 'string') {
+      aiSettings.value[key] = aiSettings.value[key] ? [aiSettings.value[key]] : [''];
+    } else if (!Array.isArray(aiSettings.value[key]) || aiSettings.value[key].length === 0) {
+      aiSettings.value[key] = [''];
+    }
+  });
 
   const savedActiveMode = localStorage.getItem('active_mode');
   if (savedActiveMode) {

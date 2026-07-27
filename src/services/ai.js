@@ -14,8 +14,13 @@
  * @returns {Promise<string>} The response text from the AI
  */
 export async function sendChatMessage({ provider, apiKey, model, systemInstruction, history, persona, resumeText, signal }) {
-  if (!apiKey) {
-    throw new Error('API Key is required to call the AI provider.');
+  // Normalize apiKey parameter to a list of non-empty strings
+  const keys = (Array.isArray(apiKey) ? apiKey : [apiKey])
+    .map(k => typeof k === 'string' ? k.trim() : '')
+    .filter(k => k !== '');
+
+  if (keys.length === 0) {
+    throw new Error(`API Key is required to call the AI provider "${provider}". Please configure it in Settings.`);
   }
 
   // Compile the "Super Prompt" combining the base instructions, candidate profile, and strict humanizer rules
@@ -116,18 +121,32 @@ This checklist reduces surface-level "AI tells" but can't guarantee text will pa
     augmentedHistory.push(lastMsg);
   }
 
-  switch (provider) {
-    case 'gemini':
-      return callGeminiAPI({ apiKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
-    case 'groq':
-      return callGroqAPI({ apiKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
-    case 'openrouter':
-      return callOpenRouterAPI({ apiKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
-    case 'github':
-      return callGitHubAPI({ apiKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
-    default:
-      throw new Error(`Unsupported AI Provider: ${provider}`);
+  let lastError = null;
+  for (let i = 0; i < keys.length; i++) {
+    const activeKey = keys[i];
+    try {
+      switch (provider) {
+        case 'gemini':
+          return await callGeminiAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+        case 'groq':
+          return await callGroqAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+        case 'openrouter':
+          return await callOpenRouterAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+        case 'github':
+          return await callGitHubAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+        default:
+          throw new Error(`Unsupported AI Provider: ${provider}`);
+      }
+    } catch (err) {
+      console.warn(`API key rotation: key ${i + 1}/${keys.length} for ${provider} failed:`, err.message || err);
+      lastError = err;
+      if (i < keys.length - 1) {
+        continue;
+      }
+    }
   }
+
+  throw new Error(`All configured API keys for ${provider} failed. Last error: ${lastError ? lastError.message : 'Unknown Error'}`);
 }
 
 /**
