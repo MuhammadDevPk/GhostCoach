@@ -41,10 +41,13 @@ function animate() {
   if (isPlaying.value && textRef.value && containerRef.value) {
     scrollPosition.value -= speed.value;
     
-    // Loop back to the right if it fully scrolls off-screen to the left
+    // Auto-close when text fully scrolls off-screen to the left
     const textWidth = textRef.value.clientWidth;
     if (scrollPosition.value < -textWidth) {
-      resetScroll();
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = null;
+      emit('close');
+      return;
     }
   }
   animationFrameId = requestAnimationFrame(animate);
@@ -73,8 +76,8 @@ onMounted(() => {
     });
   }
   
-  // Listen for Escape key locally
-  window.addEventListener('keydown', handleEscKey, true);
+  // Listen for Escape / Arrow keys locally
+  window.addEventListener('keydown', handleKeyDown, true);
 
   // Sync background color changes in real-time from settings
   window.addEventListener('storage', handleStorageChange);
@@ -84,7 +87,7 @@ onBeforeUnmount(() => {
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId);
   }
-  window.removeEventListener('keydown', handleEscKey, true);
+  window.removeEventListener('keydown', handleKeyDown, true);
   window.removeEventListener('storage', handleStorageChange);
 });
 
@@ -100,9 +103,27 @@ function handleStorageChange(e) {
   }
 }
 
-function handleEscKey(e) {
+function handleKeyDown(e) {
   if (e.key === 'Escape') {
     emit('close');
+    return;
+  }
+  // Arrow keys manually seek through text (pause is not required)
+  const SEEK_PX = 120; // ~1 word width
+  if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    // Seeking backward = move text to the right (increase scrollPosition)
+    if (textRef.value && containerRef.value) {
+      const maxBack = containerRef.value.clientWidth; // can't go past start
+      scrollPosition.value = Math.min(scrollPosition.value + SEEK_PX, maxBack);
+    }
+  } else if (e.key === 'ArrowRight') {
+    e.preventDefault();
+    // Seeking forward = move text to the left (decrease scrollPosition)
+    if (textRef.value) {
+      const minForward = -textRef.value.clientWidth;
+      scrollPosition.value = Math.max(scrollPosition.value - SEEK_PX, minForward);
+    }
   }
 }
 
