@@ -208,11 +208,32 @@ ipcMain.on('window:close', () => {
 });
 
 // Teleprompter communications
+let pendingTeleprompterText = null; // holds text queued before window finishes loading
+
+function sendTeleprompterText(text) {
+  if (!teleprompterWindow) return;
+
+  const wc = teleprompterWindow.webContents;
+  if (wc.isLoading()) {
+    // Page is still loading — queue the text and send once ready
+    pendingTeleprompterText = text;
+    wc.once('did-finish-load', () => {
+      if (pendingTeleprompterText !== null) {
+        wc.send('teleprompter:load', pendingTeleprompterText);
+        pendingTeleprompterText = null;
+      }
+    });
+  } else {
+    // Page already loaded — send immediately
+    wc.send('teleprompter:load', text);
+  }
+}
+
 ipcMain.on('teleprompter:show', (event, text) => {
   if (!teleprompterWindow) {
     createTeleprompterWindow();
   }
-  teleprompterWindow.webContents.send('teleprompter:load', text);
+  sendTeleprompterText(text);
   teleprompterWindow.show();
 });
 

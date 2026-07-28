@@ -22,10 +22,15 @@ const bgOpacity = ref(0.95);
 const localText = ref(props.text);
 let animationFrameId = null;
 
-// Initialize scroll position when text changes
+// Initialize scroll position when text changes; restart animation if it was stopped by auto-close
 watch(() => props.text, (newVal) => {
   localText.value = newVal;
   resetScroll();
+  isPlaying.value = true; // ensure we're not left in paused state from previous run
+  if (!animationFrameId) {
+    // Loop was stopped by auto-close — restart it for the new text
+    animationFrameId = requestAnimationFrame(animate);
+  }
 }, { immediate: true });
 
 function resetScroll() {
