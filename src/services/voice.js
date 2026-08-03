@@ -76,9 +76,27 @@ export class SpeechToText {
           if (shouldTranscribe && audioBlob.size > 100) {
             try {
               let text = '';
-              if (this.groqKey) {
-                text = await this.transcribeViaGroqWhisper(audioBlob);
-              } else if (this.geminiKey) {
+
+              const hasGroq = Array.isArray(this.groqKey)
+                ? this.groqKey.some(k => typeof k === 'string' && k.trim() !== '')
+                : typeof this.groqKey === 'string' && this.groqKey.trim() !== '';
+
+              const hasGemini = Array.isArray(this.geminiKey)
+                ? this.geminiKey.some(k => typeof k === 'string' && k.trim() !== '')
+                : typeof this.geminiKey === 'string' && this.geminiKey.trim() !== '';
+
+              if (hasGroq) {
+                try {
+                  text = await this.transcribeViaGroqWhisper(audioBlob);
+                } catch (err) {
+                  console.warn('All Groq Whisper keys failed. Attempting Gemini fallback...', err.message);
+                  if (hasGemini) {
+                    text = await this.transcribeViaGemini(audioBlob);
+                  } else {
+                    throw err;
+                  }
+                }
+              } else if (hasGemini) {
                 text = await this.transcribeViaGemini(audioBlob);
               }
 
@@ -121,36 +139,66 @@ export class SpeechToText {
    * Transcribe recorded audio blob using Groq Whisper Large v3
    */
   async transcribeViaGroqWhisper(audioBlob) {
-    const url = 'https://api.groq.com/openai/v1/audio/transcriptions';
-    const formData = new FormData();
-    formData.append('file', audioBlob, 'speech.webm');
-    formData.append('model', 'whisper-large-v3');
-    formData.append('response_format', 'json');
+    const keys = (Array.isArray(this.groqKey) ? this.groqKey : [this.groqKey])
+      .map(k => typeof k === 'string' ? k.trim() : '')
+      .filter(k => k !== '');
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.groqKey}`
-      },
-      body: formData
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || response.statusText || 'Groq Whisper error');
+    if (keys.length === 0) {
+      throw new Error('No valid Groq API keys configured for transcription.');
     }
 
-    const result = await response.json();
-    return result.text || '';
+    const url = 'https://api.groq.com/openai/v1/audio/transcriptions';
+    let lastError = null;
+
+    for (let i = 0; i < keys.length; i++) {
+      const activeKey = keys[i];
+      try {
+        const formData = new FormData();
+        formData.append('file', audioBlob, 'speech.webm');
+        formData.append('model', 'whisper-large-v3');
+        formData.append('response_format', 'json');
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${activeKey}`
+          },
+          body: formData
+        });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || response.statusText || 'Groq Whisper error');
+      }
+
+      const result = await response.json();
+      return result.text || '';
+
+      } catch (error) {
+        console.warn(`Groq Whisper transcription key rotation: key ${i + 1}/${keys.length} failed:`, error.message || error);
+        lastError = error;
+
+        if (i < keys.length - 1) {
+          continue;
+        }
+      }
+    }
+    throw new Error(`All Groq Whisper transcription keys failed. Last error: ${lastError ? lastError.message : 'Unknown Error'}`);
   }
 
   /**
    * Transcribe recorded audio blob using Gemini Multimodal input
    */
   async transcribeViaGemini(audioBlob) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.geminiModel}:generateContent?key=${this.geminiKey}`;
-    const base64Audio = await this.blobToBase64(audioBlob);
+    const keys = (Array.isArray(this.geminiKey) ? this.geminiKey : [this.geminiKey])
+      .map(k => typeof k === 'string' ? k.trim() : '')
+      .filter(k => k !== '');
 
+    if (keys.length === 0) {
+      throw new Error('No valid Gemini API keys configured for transcription.');
+    }
+
+    const base64Audio = await this.blobToBase64(audioBlob);
     const payload = {
       contents: [{
         parts: [
@@ -167,22 +215,39 @@ export class SpeechToText {
       }]
     };
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    });
+    let lastError = null;
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || response.statusText || 'Gemini Transcribe error');
+    for (let i = 0; i < keys.length; i++) {
+      const activeKey = keys[i];
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.geminiModel}:generateContent?key=${activeKey}`;
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error?.message || response.statusText || 'Gemini Transcribe error');
+        }
+
+        const result = await response.json();
+        const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        return text ? text.trim() : '';
+      } catch (err) {
+        console.warn(`Gemini transcription key rotation: key ${i + 1}/${keys.length} failed:`, err.message || err);
+        lastError = err;
+        if (i < keys.length - 1) {
+          continue; // Try next key
+        }
+      }
     }
 
-    const result = await response.json();
-    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-    return text ? text.trim() : '';
+    throw new Error(`All Gemini transcription keys failed. Last error: ${lastError ? lastError.message : 'Unknown Error'}`);
   }
 
   blobToBase64(blob) {
