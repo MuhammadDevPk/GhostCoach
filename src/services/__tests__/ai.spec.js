@@ -38,11 +38,12 @@ describe('ai.js key rotation', () => {
   });
 
   it('fails completely if all keys fail', async () => {
+    // Use a 429 rate-limit style error — these are 'rotate' errors so each key is tried exactly once
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
-      status: 401,
-      statusText: 'Unauthorized',
-      json: async () => ({ error: { message: 'Invalid API Key' } })
+      status: 429,
+      statusText: 'Too Many Requests',
+      json: async () => ({ error: { message: 'Rate Limit Exceeded' } })
     });
 
     await expect(
@@ -53,8 +54,31 @@ describe('ai.js key rotation', () => {
         systemInstruction: 'Test instructions',
         history: [{ role: 'user', content: 'hello' }]
       })
-    ).rejects.toThrow('All configured API keys for groq failed. Last error: Groq API Error: Invalid API Key');
+    ).rejects.toThrow('All configured API keys for groq failed. Last error: Groq API Error: Rate Limit Exceeded');
 
+    // Rate-limit errors rotate immediately (no same-key retry) — one call per key
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('aborts immediately and does not rotate keys if aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    const abortError = new DOMException('The user aborted a request.', 'AbortError');
+    vi.mocked(fetch).mockRejectedValue(abortError);
+
+    await expect(
+      sendChatMessage({
+        provider: 'groq',
+        apiKey: ['key_1', 'key_2'],
+        model: 'llama-3.3-70b-versatile',
+        systemInstruction: 'Test instructions',
+        history: [{ role: 'user', content: 'hello' }],
+        signal: controller.signal
+      })
+    ).rejects.toThrow('The user aborted a request.');
+
+    // Fetch is only called once and then immediately aborts the process (no retries or rotation to key_2)
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 });

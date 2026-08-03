@@ -121,27 +121,56 @@ This checklist reduces surface-level "AI tells" but can't guarantee text will pa
     augmentedHistory.push(lastMsg);
   }
 
+  // Error classification helpers
+  // 'rotate' errors = key is bad (401/403) or rate-limited (429) → try next key
+  // 'retry'  errors = transient upstream failure (empty content, 500-level) → retry same key once
+  function isRotateError(err) {
+    return /401|403|429|Unauthorized|Forbidden|Rate Limit|rate_limit/i.test(err.message || '');
+  }
+
   let lastError = null;
   for (let i = 0; i < keys.length; i++) {
     const activeKey = keys[i];
-    try {
-      switch (provider) {
-        case 'gemini':
-          return await callGeminiAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
-        case 'groq':
-          return await callGroqAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
-        case 'openrouter':
-          return await callOpenRouterAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
-        case 'github':
-          return await callGitHubAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
-        default:
-          throw new Error(`Unsupported AI Provider: ${provider}`);
-      }
-    } catch (err) {
-      console.warn(`API key rotation: key ${i + 1}/${keys.length} for ${provider} failed:`, err.message || err);
-      lastError = err;
-      if (i < keys.length - 1) {
-        continue;
+    let attempt = 0;
+    const MAX_SAME_KEY_RETRIES = 1; // one retry on transient errors before rotating
+
+    while (attempt <= MAX_SAME_KEY_RETRIES) {
+      try {
+        switch (provider) {
+          case 'gemini':
+            return await callGeminiAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+          case 'groq':
+            return await callGroqAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+          case 'openrouter':
+            return await callOpenRouterAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+          case 'github':
+            return await callGitHubAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+          default:
+            throw new Error(`Unsupported AI Provider: ${provider}`);
+        }
+      } catch (err) {
+        lastError = err;
+
+        if (err.name === 'AbortError' || signal?.aborted) {
+          throw err;
+        }
+
+        if (isRotateError(err)) {
+          // Auth / rate-limit error — rotating to next key will help
+          console.warn(`API key rotation: key ${i + 1}/${keys.length} for ${provider} has auth/rate-limit error, rotating:`, err.message);
+          break; // exit while loop, outer for loop moves to next key
+        }
+
+        if (attempt < MAX_SAME_KEY_RETRIES) {
+          // Transient structural error — retry same key once
+          console.warn(`API key retry: key ${i + 1}/${keys.length} for ${provider} returned transient error (attempt ${attempt + 1}), retrying:`, err.message);
+          attempt++;
+          continue;
+        }
+
+        // Exhausted same-key retries — try next key as a last resort
+        console.warn(`API key rotation: key ${i + 1}/${keys.length} for ${provider} exhausted retries, rotating:`, err.message);
+        break;
       }
     }
   }
@@ -303,9 +332,18 @@ async function callOpenRouterAPI({ apiKey, model, systemInstruction, history, si
   }
 
   const result = await response.json();
-  const text = result.choices?.[0]?.message?.content;
+  const choice = result.choices?.[0];
+  const text = choice?.message?.content;
+
   if (!text) {
-    throw new Error('OpenRouter API response structure was missing content text.');
+    // Inspect finish_reason to give a meaningful diagnostic
+    const finishReason = choice?.finish_reason || result.error?.code || 'unknown';
+    const providerInfo = result.error?.message || '';
+    throw new Error(
+      `OpenRouter returned empty content (finish_reason: ${finishReason})${
+        providerInfo ? ` — ${providerInfo}` : ''
+      }. This is usually a transient upstream provider issue; the request will be retried automatically.`
+    );
   }
 
   const usage = result.usage || {};
