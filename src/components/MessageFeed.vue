@@ -30,6 +30,10 @@ const props = defineProps({
   voiceInterimText: {
     type: String,
     required: true
+  },
+  teleprompterHighlight: {
+    type: Object,
+    default: null
   }
 });
 
@@ -92,6 +96,7 @@ onMounted(() => {
         :msg="msg"
         :is-latest="index === messages.length - 1"
         :font-size="fontSize"
+        :teleprompter-highlight="teleprompterHighlight"
         @delete="$emit('delete-message', $event)"
       />
     </template>

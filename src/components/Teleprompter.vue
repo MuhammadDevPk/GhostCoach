@@ -8,7 +8,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'progress']);
 
 const isPlaying = ref(true);
 const speed = ref(1.5); // scroll speed (pixels per frame)
@@ -21,12 +21,15 @@ const bgColor = ref('#191922');
 const bgOpacity = ref(0.95);
 const localText = ref(props.text);
 let animationFrameId = null;
+// Frame counter: throttle progress IPC sends to ~8fps instead of 60fps
+let _progressFrameCount = 0;
 
 // Initialize scroll position when text changes; restart animation if it was stopped by auto-close
 watch(() => props.text, (newVal) => {
   localText.value = newVal;
   resetScroll();
   isPlaying.value = true; // ensure we're not left in paused state from previous run
+  _progressFrameCount = 0;
   if (!animationFrameId) {
     // Loop was stopped by auto-close — restart it for the new text
     animationFrameId = requestAnimationFrame(animate);
@@ -51,11 +54,57 @@ function animate() {
     if (scrollPosition.value < -textWidth) {
       cancelAnimationFrame(animationFrameId);
       animationFrameId = null;
+      emitProgress(null); // clear app highlight
       emit('close');
       return;
     }
+
+    // Emit progress to app every 8 frames (~7.5fps) — enough for smooth highlight tracking
+    _progressFrameCount++;
+    if (_progressFrameCount % 8 === 0) {
+      emitProgress(computeHighlightRange());
+    }
   }
   animationFrameId = requestAnimationFrame(animate);
+}
+
+/**
+ * Compute which character range of localText is currently visible
+ * in the center 500px window of the teleprompter banner.
+ * Uses linear character distribution as a fast approximation.
+ */
+function computeHighlightRange() {
+  if (!textRef.value || !containerRef.value || !localText.value) return null;
+  const containerWidth = containerRef.value.clientWidth;
+  const textWidth = textRef.value.clientWidth;
+  const totalChars = localText.value.length;
+  if (totalChars === 0 || textWidth === 0) return null;
+
+  const CENTER_WINDOW_PX = 500;
+  const centerLeft = (containerWidth - CENTER_WINDOW_PX) / 2;
+  const centerRight = centerLeft + CENTER_WINDOW_PX;
+
+  // Each character i is roughly at: scrollPosition + (i / totalChars) * textWidth
+  const startIndex = Math.max(0,
+    Math.floor(((centerLeft - scrollPosition.value) / textWidth) * totalChars)
+  );
+  const endIndex = Math.min(totalChars,
+    Math.ceil(((centerRight - scrollPosition.value) / textWidth) * totalChars)
+  );
+
+  if (startIndex >= endIndex) return null;
+  return { text: localText.value, startIndex, endIndex };
+}
+
+/**
+ * Send highlight progress to the main app window.
+ * Works in both in-app overlay mode (Vue emit) and Electron separate-window mode (IPC).
+ */
+function emitProgress(progress) {
+  emit('progress', progress);
+  if (window.electronAPI && typeof window.electronAPI.sendTeleprompterProgress === 'function') {
+    window.electronAPI.sendTeleprompterProgress(progress);
+  }
 }
 
 onMounted(() => {
@@ -78,6 +127,11 @@ onMounted(() => {
     window.electronAPI.onLoadTeleprompter((loadedText) => {
       localText.value = loadedText;
       resetScroll();
+      isPlaying.value = true;
+      _progressFrameCount = 0;
+      if (!animationFrameId) {
+        animationFrameId = requestAnimationFrame(animate);
+      }
     });
   }
   
@@ -92,6 +146,7 @@ onBeforeUnmount(() => {
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId);
   }
+  emitProgress(null); // clear app highlight on unmount
   window.removeEventListener('keydown', handleKeyDown, true);
   window.removeEventListener('storage', handleStorageChange);
 });
@@ -121,6 +176,7 @@ function handleKeyDown(e) {
     if (textRef.value && containerRef.value) {
       const maxBack = containerRef.value.clientWidth; // can't go past start
       scrollPosition.value = Math.min(scrollPosition.value + SEEK_PX, maxBack);
+      emitProgress(computeHighlightRange());
     }
   } else if (e.key === 'ArrowRight') {
     e.preventDefault();
@@ -128,9 +184,32 @@ function handleKeyDown(e) {
     if (textRef.value) {
       const minForward = -textRef.value.clientWidth;
       scrollPosition.value = Math.max(scrollPosition.value - SEEK_PX, minForward);
+      emitProgress(computeHighlightRange());
     }
   }
 }
+
+/**
+ * Mouse wheel handler — allows horizontal scrolling through the teleprompter text.
+ * Bound via @wheel.prevent on the banner container (native scroll is suppressed).
+ * Prefers horizontal deltaX (trackpad two-finger swipe), falls back to vertical deltaY.
+ */
+function handleWheel(e) {
+  const WHEEL_SENSITIVITY = 2.5; // pixels moved per wheel delta unit
+  const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+  scrollPosition.value -= delta * WHEEL_SENSITIVITY;
+
+  // Clamp to valid range so you can't scroll past start or end
+  if (textRef.value && containerRef.value) {
+    const maxRight = containerRef.value.clientWidth; // fully off-screen right
+    const maxLeft = -textRef.value.clientWidth;      // fully off-screen left
+    scrollPosition.value = Math.max(maxLeft, Math.min(maxRight, scrollPosition.value));
+  }
+
+  // Immediately emit updated progress on wheel interaction
+  emitProgress(computeHighlightRange());
+}
+
 
 function togglePlay() {
   isPlaying.value = !isPlaying.value;
@@ -181,7 +260,11 @@ const timeRemaining = computed(() => {
 <template>
   <div class="teleprompter-overlay">
     <div class="teleprompter-bg-overlay" :style="{ backgroundColor: bgColor, opacity: bgOpacity }"></div>
-    <div class="teleprompter-banner" ref="containerRef">
+    <div
+      class="teleprompter-banner"
+      ref="containerRef"
+      @wheel.prevent="handleWheel"
+    >
       <div 
         class="teleprompter-text" 
         ref="textRef"

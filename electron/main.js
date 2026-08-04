@@ -242,3 +242,11 @@ ipcMain.on('teleprompter:close', () => {
     teleprompterWindow.hide();
   }
 });
+
+// Forward real-time scroll progress from teleprompter window to the main app window
+ipcMain.on('teleprompter:progress', (_event, progress) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('teleprompter:progress', progress);
+  }
+});
+

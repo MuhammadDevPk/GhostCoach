@@ -8,5 +8,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   showTeleprompter: (text) => ipcRenderer.send('teleprompter:show', text),
   closeTeleprompter: () => ipcRenderer.send('teleprompter:close'),
   onLoadTeleprompter: (callback) => ipcRenderer.on('teleprompter:load', (_event, value) => callback(value)),
-  onTeleprompterClosed: (callback) => ipcRenderer.on('teleprompter:closed', (_event, value) => callback(value))
+  onTeleprompterClosed: (callback) => ipcRenderer.on('teleprompter:closed', (_event, value) => callback(value)),
+  // Real-time scroll progress — teleprompter window sends, main window receives
+  sendTeleprompterProgress: (progress) => ipcRenderer.send('teleprompter:progress', progress),
+  onTeleprompterProgress: (callback) => ipcRenderer.on('teleprompter:progress', (_event, value) => callback(value))
 });

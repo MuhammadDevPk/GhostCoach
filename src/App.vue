@@ -62,6 +62,8 @@ const isLoading = ref(false);
 const totalSessionTokens = ref(0);
 const showTeleprompter = ref(false);
 const teleprompterText = ref('');
+// Real-time highlight range received from the teleprompter (null = no active highlight)
+const teleprompterHighlight = ref(null);
 const isTeleprompterMode = window.location.hash === '#/teleprompter';
 let activeAbortController = null;
 
@@ -157,10 +159,18 @@ onMounted(() => {
     });
   }
 
-  // Listen for external teleprompter window closed event to clear text
+  // Listen for external teleprompter window closed event to clear text and highlight
   if (window.electronAPI && typeof window.electronAPI.onTeleprompterClosed === 'function') {
     window.electronAPI.onTeleprompterClosed(() => {
       teleprompterText.value = '';
+      teleprompterHighlight.value = null;
+    });
+  }
+
+  // Receive real-time scroll progress from the Electron teleprompter window
+  if (window.electronAPI && typeof window.electronAPI.onTeleprompterProgress === 'function') {
+    window.electronAPI.onTeleprompterProgress((progress) => {
+      teleprompterHighlight.value = progress;
     });
   }
 
@@ -622,6 +632,7 @@ function closeApp() {
     <Teleprompter
       :text="teleprompterText"
       @close="closeTeleprompterWindow"
+      @progress="teleprompterHighlight = $event"
     />
   </div>
   <div v-else class="app-container">
@@ -649,6 +660,7 @@ function closeApp() {
       :font-size="fontSize"
       :is-loading="isLoading"
       :voice-interim-text="voiceInterimText"
+      :teleprompter-highlight="teleprompterHighlight"
       @send-local-test-prompt="sendLocalTestPrompt"
       @delete-message="deleteMessage"
     />

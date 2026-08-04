@@ -844,3 +844,19 @@ body {
 }
 
 
+/* ─── Teleprompter Real-Time Highlight ─────────────────────────────────────── */
+/* Applied via v-html injection in MessageCard. Must be global (not scoped).    */
+.tp-highlight {
+  background: rgba(251, 191, 36, 0.28);   /* amber-400 at low opacity */
+  color: #fde68a;                          /* amber-200 — readable on dark bg   */
+  border-radius: 3px;
+  padding: 0 2px;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.35);
+  transition: background 0.12s ease, box-shadow 0.12s ease;
+  animation: tp-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes tp-pulse {
+  0%, 100% { background: rgba(251, 191, 36, 0.20); box-shadow: 0 0 6px rgba(251, 191, 36, 0.25); }
+  50%       { background: rgba(251, 191, 36, 0.38); box-shadow: 0 0 14px rgba(251, 191, 36, 0.50); }
+}
