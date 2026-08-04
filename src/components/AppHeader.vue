@@ -50,7 +50,6 @@ defineEmits([
           'connecting': connectionState === 'connecting',
           'disconnected': connectionState === 'disconnected'
         }"
-        :title="'Status: ' + connectionState"
       ></span>
       <span class="header-title">Ghost Coach</span>
 
@@ -76,7 +75,6 @@ defineEmits([
       <button
         class="btn-icon"
         @click="$emit('decrease-font')"
-        title="Decrease font size"
         style="font-size: 10px; font-weight: bold; width: 20px;"
       >
         A-
@@ -87,7 +85,6 @@ defineEmits([
       <button
         class="btn-icon"
         @click="$emit('increase-font')"
-        title="Increase font size"
         style="font-size: 11px; font-weight: bold; width: 20px;"
       >
         A+
@@ -100,7 +97,6 @@ defineEmits([
         class="btn-icon"
         :class="{ 'active': showChatInput }"
         @click="$emit('toggle-chat-input')"
-        title="Toggle AI Chat Input"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -112,7 +108,6 @@ defineEmits([
         class="btn-icon"
         :class="{ 'active': teleprompterEnabled }"
         @click="$emit('toggle-teleprompter')"
-        title="Toggle Teleprompter Auto-Run (Active on AI Replies)"
         style="position: relative;"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -124,7 +119,6 @@ defineEmits([
         class="btn-icon"
         :class="{ 'active': showSettings }"
         @click="$emit('toggle-settings')"
-        title="Configure App Settings"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"></circle>
@@ -132,13 +126,13 @@ defineEmits([
         </svg>
       </button>
 
-      <button class="btn-icon" @click="$emit('minimize')" title="Minimize Window">
+      <button class="btn-icon" @click="$emit('minimize')" >
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <line x1="5" y1="12" x2="19" y2="12"></line>
         </svg>
       </button>
 
-      <button class="btn-icon btn-close" @click="$emit('close')" title="Quit App">
+      <button class="btn-icon btn-close" @click="$emit('close')" >
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>

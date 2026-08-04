@@ -108,7 +108,7 @@ const handleSave = () => {
   <div class="settings-overlay">
     <div class="settings-header">
       <h3 class="settings-title">Ghost Coach Config</h3>
-      <button class="btn-icon" @click="$emit('close')" title="Close Settings">
+      <button class="btn-icon" @click="$emit('close')" >
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -212,17 +212,16 @@ const handleSave = () => {
           <div class="form-group">
             <label>Gemini API Keys</label>
             <div v-for="(key, index) in localAiSettings.geminiKey" :key="index" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
-              <input 
-                v-model="localAiSettings.geminiKey[index]" 
-                :type="showKeys['geminiKey-' + index] ? 'text' : 'password'" 
-                placeholder="AIzaSy..." 
-                style="flex: 1;" 
+              <input
+                v-model="localAiSettings.geminiKey[index]"
+                :type="showKeys['geminiKey-' + index] ? 'text' : 'password'"
+                placeholder="AIzaSy..."
+                style="flex: 1;"
               />
               <button
                 type="button"
                 style="color: var(--text-muted); background: rgba(255, 255, 255, 0.06); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); cursor: pointer;"
                 @click="toggleKeyVisibility('geminiKey', index)"
-                :title="showKeys['geminiKey-' + index] ? 'Hide API Key' : 'Show API Key'"
               >
                 <svg v-if="showKeys['geminiKey-' + index]" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
@@ -238,7 +237,6 @@ const handleSave = () => {
                 type="button"
                 style="color: #ef4444; background: rgba(239, 68, 68, 0.15); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;"
                 @click="localAiSettings.geminiKey.splice(index, 1)"
-                title="Remove API Key"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="3 6 5 6 21 6"></polyline>
@@ -265,17 +263,16 @@ const handleSave = () => {
           <div class="form-group">
             <label>Groq API Keys</label>
             <div v-for="(key, index) in localAiSettings.groqKey" :key="index" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
-              <input 
-                v-model="localAiSettings.groqKey[index]" 
-                :type="showKeys['groqKey-' + index] ? 'text' : 'password'" 
-                placeholder="gsk_..." 
-                style="flex: 1;" 
+              <input
+                v-model="localAiSettings.groqKey[index]"
+                :type="showKeys['groqKey-' + index] ? 'text' : 'password'"
+                placeholder="gsk_..."
+                style="flex: 1;"
               />
               <button
                 type="button"
                 style="color: var(--text-muted); background: rgba(255, 255, 255, 0.06); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); cursor: pointer;"
                 @click="toggleKeyVisibility('groqKey', index)"
-                :title="showKeys['groqKey-' + index] ? 'Hide API Key' : 'Show API Key'"
               >
                 <svg v-if="showKeys['groqKey-' + index]" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
@@ -291,7 +288,6 @@ const handleSave = () => {
                 type="button"
                 style="color: #ef4444; background: rgba(239, 68, 68, 0.15); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;"
                 @click="localAiSettings.groqKey.splice(index, 1)"
-                title="Remove API Key"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="3 6 5 6 21 6"></polyline>
@@ -318,17 +314,16 @@ const handleSave = () => {
           <div class="form-group">
             <label>OpenRouter API Keys</label>
             <div v-for="(key, index) in localAiSettings.openrouterKey" :key="index" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
-              <input 
-                v-model="localAiSettings.openrouterKey[index]" 
-                :type="showKeys['openrouterKey-' + index] ? 'text' : 'password'" 
-                placeholder="sk-or-v1-..." 
-                style="flex: 1;" 
+              <input
+                v-model="localAiSettings.openrouterKey[index]"
+                :type="showKeys['openrouterKey-' + index] ? 'text' : 'password'"
+                placeholder="sk-or-v1-..."
+                style="flex: 1;"
               />
               <button
                 type="button"
                 style="color: var(--text-muted); background: rgba(255, 255, 255, 0.06); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); cursor: pointer;"
                 @click="toggleKeyVisibility('openrouterKey', index)"
-                :title="showKeys['openrouterKey-' + index] ? 'Hide API Key' : 'Show API Key'"
               >
                 <svg v-if="showKeys['openrouterKey-' + index]" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
@@ -344,7 +339,6 @@ const handleSave = () => {
                 type="button"
                 style="color: #ef4444; background: rgba(239, 68, 68, 0.15); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;"
                 @click="localAiSettings.openrouterKey.splice(index, 1)"
-                title="Remove API Key"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="3 6 5 6 21 6"></polyline>
@@ -371,17 +365,16 @@ const handleSave = () => {
           <div class="form-group">
             <label>GitHub Tokens / API Keys</label>
             <div v-for="(key, index) in localAiSettings.githubKey" :key="index" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
-              <input 
-                v-model="localAiSettings.githubKey[index]" 
-                :type="showKeys['githubKey-' + index] ? 'text' : 'password'" 
-                placeholder="ghp_... or github_pat_..." 
-                style="flex: 1;" 
+              <input
+                v-model="localAiSettings.githubKey[index]"
+                :type="showKeys['githubKey-' + index] ? 'text' : 'password'"
+                placeholder="ghp_... or github_pat_..."
+                style="flex: 1;"
               />
               <button
                 type="button"
                 style="color: var(--text-muted); background: rgba(255, 255, 255, 0.06); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); cursor: pointer;"
                 @click="toggleKeyVisibility('githubKey', index)"
-                :title="showKeys['githubKey-' + index] ? 'Hide API Key' : 'Show API Key'"
               >
                 <svg v-if="showKeys['githubKey-' + index]" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
@@ -397,7 +390,6 @@ const handleSave = () => {
                 type="button"
                 style="color: #ef4444; background: rgba(239, 68, 68, 0.15); width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer;"
                 @click="localAiSettings.githubKey.splice(index, 1)"
-                title="Remove API Key"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="3 6 5 6 21 6"></polyline>

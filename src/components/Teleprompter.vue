@@ -289,7 +289,7 @@ const timeRemaining = computed(() => {
       <div class="toolbar-divider"></div>
 
       <div class="toolbar-section controls">
-        <button class="btn-tool" @click="resetScroll" title="Restart Scroll">
+        <button class="btn-tool" @click="resetScroll">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M2.5 2v6h6M2.66 15.57a10 10 0 1 0-.57-8.38l5.67-5.67"></path>
           </svg>
@@ -309,22 +309,22 @@ const timeRemaining = computed(() => {
       <div class="toolbar-divider"></div>
 
       <div class="toolbar-section sizing">
-        <button class="btn-tool" @click="decreaseFont" title="Decrease Font">A-</button>
+        <button class="btn-tool" @click="decreaseFont">A-</button>
         <span class="value-display">{{ fontSize }}px</span>
-        <button class="btn-tool" @click="increaseFont" title="Increase Font">A+</button>
+        <button class="btn-tool" @click="increaseFont">A+</button>
       </div>
 
       <div class="toolbar-divider"></div>
 
       <div class="toolbar-section speed">
-        <button class="btn-tool" @click="decreaseSpeed" title="Decrease Speed">S-</button>
+        <button class="btn-tool" @click="decreaseSpeed">S-</button>
         <span class="value-display">{{ speed }}x</span>
-        <button class="btn-tool" @click="increaseSpeed" title="Increase Speed">S+</button>
+        <button class="btn-tool" @click="increaseSpeed">S+</button>
       </div>
 
       <div class="toolbar-divider"></div>
 
-      <button class="btn-tool btn-close-tool" @click="$emit('close')" title="Close (Esc)">
+      <button class="btn-tool btn-close-tool" @click="$emit('close')">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>

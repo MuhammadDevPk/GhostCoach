@@ -68,7 +68,6 @@ const handleSubmit = () => {
       v-if="isLoading || isMicListening"
       class="btn-icon btn-cancel"
       @click="$emit('cancel')"
-      title="Cancel Active Action (Cmd+C / Esc)"
       type="button"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -88,7 +87,6 @@ const handleSubmit = () => {
       class="btn-send"
       @click="$emit('submit')"
       :disabled="isLoading || !modelValue.trim()"
-      title="Send Question"
       type="button"
     >
       <svg v-if="!isLoading" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
