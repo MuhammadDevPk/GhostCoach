@@ -8,7 +8,8 @@ describe('AppHeader.vue', () => {
     fontSize: 15,
     showChatInput: true,
     showSettings: false,
-    teleprompterEnabled: false
+    teleprompterEnabled: false,
+    wsEnabled: true
   };
 
   it('renders title and status dot with correct status class', () => {
@@ -18,6 +19,31 @@ describe('AppHeader.vue', () => {
 
     expect(wrapper.find('.header-title').text()).toBe('Ghost Coach');
     expect(wrapper.find('.status-dot').classes()).toContain('connected');
+  });
+
+  it('emits toggle-ws when WebSocket Start/End button is clicked', async () => {
+    const wrapper = mount(AppHeader, {
+      props: defaultProps
+    });
+
+    const wsToggleBtn = wrapper.find('.btn-ws-toggle');
+    expect(wsToggleBtn.text()).toContain('End WS');
+
+    await wsToggleBtn.trigger('click');
+    expect(wrapper.emitted('toggle-ws')).toBeTruthy();
+  });
+
+  it('displays Start WS label when wsEnabled is false', () => {
+    const wrapper = mount(AppHeader, {
+      props: {
+        ...defaultProps,
+        wsEnabled: false
+      }
+    });
+
+    const wsToggleBtn = wrapper.find('.btn-ws-toggle');
+    expect(wsToggleBtn.text()).toContain('Start WS');
+    expect(wsToggleBtn.classes()).toContain('is-stopped');
   });
 
   it('reflects connecting state style', () => {
@@ -107,3 +133,4 @@ describe('AppHeader.vue', () => {
     expect(wrapper.emitted('close')).toBeTruthy();
   });
 });
+
