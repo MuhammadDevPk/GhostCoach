@@ -27,7 +27,8 @@ const DEFAULT_SETTINGS = {
   appBgOpacity: 1.0,
   teleprompterBgColor: '#191922',
   teleprompterBgOpacity: 0.95,
-  teleprompterEnabled: true  // auto-run on AI replies (can be toggled from header or Settings > Appearance)
+  teleprompterEnabled: true,  // auto-run on AI replies
+  wsEnabled: true             // WebSocket connection enabled state (can be toggled from header)
 };
 
 // Define default AI settings
@@ -216,8 +217,8 @@ function connectEcho() {
     echoInstance = null;
   }
 
-  // If activeMode is AI-only, do not attempt WebSocket connection
-  if (activeMode.value === 'ai') {
+  // If WebSocket is disabled by user or activeMode is AI-only, do not attempt connection
+  if (settings.value.wsEnabled === false || activeMode.value === 'ai') {
     connectionState.value = 'disconnected';
     return;
   }
@@ -272,6 +273,27 @@ function connectEcho() {
 
   } catch (error) {
     console.error('Failed to initialize Echo client:', error);
+    connectionState.value = 'disconnected';
+  }
+}
+
+// Toggle WebSocket connection ON/OFF (Start WS / End WS)
+function toggleWs() {
+  const nextState = settings.value.wsEnabled === false ? true : false;
+  settings.value.wsEnabled = nextState;
+  localStorage.setItem('reverb_settings', JSON.stringify(settings.value));
+
+  if (nextState) {
+    connectEcho();
+  } else {
+    if (echoInstance) {
+      try {
+        echoInstance.disconnect();
+      } catch (e) {
+        console.error('Error disconnecting Echo instance on toggle:', e);
+      }
+      echoInstance = null;
+    }
     connectionState.value = 'disconnected';
   }
 }
@@ -626,7 +648,7 @@ async function sendQuestion() {
     } else {
       console.error('AI Request Failed:', error);
       const errTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      
+
       messages.value.push({
         id: 'err-' + Date.now() + Math.random().toString(36).substr(2, 9),
         text: `Error calling AI: ${error.message || error}`,
@@ -678,11 +700,13 @@ function closeApp() {
       :show-chat-input="showChatInput"
       :show-settings="showSettings"
       :teleprompter-enabled="settings.teleprompterEnabled ?? true"
+      :ws-enabled="settings.wsEnabled ?? true"
       @decrease-font="decreaseFont"
       @increase-font="increaseFont"
       @toggle-chat-input="toggleChatInput"
       @toggle-settings="showSettings = !showSettings"
       @toggle-teleprompter="settings.teleprompterEnabled = !settings.teleprompterEnabled"
+      @toggle-ws="toggleWs"
       @minimize="minimizeApp"
       @close="closeApp"
     />

@@ -48,7 +48,7 @@ function resetScroll() {
 function animate() {
   if (isPlaying.value && textRef.value && containerRef.value) {
     scrollPosition.value -= speed.value;
-    
+
     // Auto-close when text fully scrolls off-screen to the left
     const textWidth = textRef.value.clientWidth;
     if (scrollPosition.value < -textWidth) {
@@ -134,7 +134,7 @@ onMounted(() => {
       }
     });
   }
-  
+
   // Listen for Escape / Arrow keys locally
   window.addEventListener('keydown', handleKeyDown, true);
 
@@ -246,7 +246,7 @@ const timeRemaining = computed(() => {
   const textWidth = textRef.value.clientWidth;
   const remainingPixels = scrollPosition.value + textWidth;
   if (remainingPixels <= 0) return '00:00';
-  
+
   // Assuming 60 frames per second
   const framesLeft = remainingPixels / speed.value;
   const secondsLeft = Math.ceil(framesLeft / 60);
@@ -265,18 +265,18 @@ const timeRemaining = computed(() => {
       ref="containerRef"
       @wheel.prevent="handleWheel"
     >
-      <div 
-        class="teleprompter-text" 
+      <div
+        class="teleprompter-text"
         ref="textRef"
-        :style="{ 
-          transform: `translateX(${scrollPosition}px)`, 
-          fontSize: `${fontSize}px` 
+        :style="{
+          transform: `translateX(${scrollPosition}px)`,
+          fontSize: `${fontSize}px`
         }"
       >
         {{ localText }}
       </div>
     </div>
-    
+
     <div class="teleprompter-toolbar">
       <div class="toolbar-section time-indicator">
         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -295,7 +295,7 @@ const timeRemaining = computed(() => {
           </svg>
         </button>
 
-        <button class="btn-tool btn-play" @click="togglePlay" :title="isPlaying ? 'Pause' : 'Play'">
+        <button class="btn-tool btn-play" @click="togglePlay">
           <svg v-if="isPlaying" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <rect x="6" y="4" width="4" height="16"></rect>
             <rect x="14" y="4" width="4" height="16"></rect>

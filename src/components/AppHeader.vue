@@ -20,6 +20,10 @@ defineProps({
   teleprompterEnabled: {
     type: Boolean,
     required: true
+  },
+  wsEnabled: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -29,6 +33,7 @@ defineEmits([
   'toggle-chat-input',
   'toggle-settings',
   'toggle-teleprompter',
+  'toggle-ws',
   'minimize',
   'close'
 ]);
@@ -48,6 +53,22 @@ defineEmits([
         :title="'Status: ' + connectionState"
       ></span>
       <span class="header-title">Ghost Coach</span>
+
+      <!-- WebSocket Connection Start / End Toggle Button -->
+      <button
+        class="btn-ws-toggle"
+        :class="{ 'is-active': wsEnabled, 'is-stopped': !wsEnabled }"
+        @click="$emit('toggle-ws')"
+        type="button"
+      >
+        <svg v-if="wsEnabled" xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+        </svg>
+        <svg v-else xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <span>{{ wsEnabled ? 'End WS' : 'Start WS' }}</span>
+      </button>
     </div>
 
     <!-- Custom window controls -->

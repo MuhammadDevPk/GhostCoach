@@ -115,6 +115,45 @@ body {
   animation: pulse-red 1s infinite;
 }
 
+/* WebSocket Start/End Toggle Button */
+.btn-ws-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  margin-left: 6px;
+  -webkit-app-region: no-drag;
+}
+
+.btn-ws-toggle.is-active {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.btn-ws-toggle.is-active:hover {
+  background: rgba(239, 68, 68, 0.28);
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+.btn-ws-toggle.is-stopped {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.btn-ws-toggle.is-stopped:hover {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: rgba(16, 185, 129, 0.6);
+}
+
+
 /* Action Buttons (Settings, Minimize, Close) */
 .btn-icon {
   background: transparent;
