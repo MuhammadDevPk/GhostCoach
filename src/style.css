@@ -632,6 +632,29 @@ body {
   animation: recording-glow 1.5s infinite ease-in-out;
 }
 
+/* Combined Mic + Send Button Styling */
+.btn-mic-autosend {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-mic-autosend:hover {
+  background: rgba(16, 185, 129, 0.22);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+.btn-mic-autosend.recording {
+  background: rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+  animation: recording-glow 1.5s infinite ease-in-out;
+}
+
+
 @keyframes recording-glow {
   0%, 100% { box-shadow: 0 0 4px rgba(239, 68, 68, 0.2); }
   50% { box-shadow: 0 0 14px rgba(239, 68, 68, 0.5); }

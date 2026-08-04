@@ -34,20 +34,38 @@ describe('ChatInput.vue', () => {
     expect(wrapper.emitted('toggle-mic')).toBeTruthy();
   });
 
-  it('applies recording class to mic button when active', () => {
+  it('emits toggle-mic-autosend when combined mic+send button is clicked', async () => {
     const wrapper = mount(ChatInput, {
       props: {
         modelValue: '',
-        isMicListening: true,
+        isMicListening: false,
+        isMicAutoSending: false,
         isLoading: false
       }
     });
 
-    const micBtn = wrapper.find('.btn-mic');
-    expect(micBtn.classes()).toContain('recording');
+    const micSendBtn = wrapper.find('.btn-mic-autosend');
+    await micSendBtn.trigger('click');
+
+    expect(wrapper.emitted('toggle-mic-autosend')).toBeTruthy();
+  });
+
+  it('applies recording class to mic buttons when active', () => {
+    const wrapper = mount(ChatInput, {
+      props: {
+        modelValue: '',
+        isMicListening: true,
+        isMicAutoSending: true,
+        isLoading: false
+      }
+    });
+
+    const micSendBtn = wrapper.find('.btn-mic-autosend');
+    expect(micSendBtn.classes()).toContain('recording');
   });
 
   it('emits submit when enter key is pressed inside textarea', async () => {
+
     const wrapper = mount(ChatInput, {
       props: {
         modelValue: 'Some question',

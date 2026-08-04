@@ -72,6 +72,7 @@ const fontSize = ref(15);
 
 // Voice STT state variables
 const isMicListening = ref(false);
+const isMicAutoSending = ref(false);
 const voiceInterimText = ref('');
 let sttInstance = null;
 
@@ -402,6 +403,7 @@ function cancelActiveAiCall() {
 // Cancel and discard active voice recording session without transcribing
 function cancelVoiceRecording() {
   if (!sttInstance) return;
+  isMicAutoSending.value = false;
   sttInstance.stop(false).then(() => {
     voiceInterimText.value = '';
   });
@@ -455,7 +457,7 @@ function toggleChatInput() {
   localStorage.setItem('show_chat_input', showChatInput.value);
 }
 
-// Toggle microphone audio transcription
+// Toggle microphone audio transcription (Manual review mode)
 function toggleMic() {
   if (!sttInstance) return;
   if (isMicListening.value) {
@@ -464,6 +466,7 @@ function toggleMic() {
       voiceInterimText.value = '';
     });
   } else {
+    isMicAutoSending.value = false;
     // Extract active provider and API keys for transcription
     const provider = aiSettings.value.provider;
     const geminiKey = aiSettings.value.geminiKey;
@@ -480,12 +483,44 @@ function toggleMic() {
   }
 }
 
+// Toggle microphone audio transcription with Auto-Send to AI
+function toggleMicAutoSend() {
+  if (!sttInstance) return;
+  if (isMicListening.value) {
+    voiceInterimText.value = 'Transcribing & sending to AI...';
+    sttInstance.stop().then(() => {
+      voiceInterimText.value = '';
+    });
+  } else {
+    isMicAutoSending.value = true;
+    const provider = aiSettings.value.provider;
+    const geminiKey = aiSettings.value.geminiKey;
+    const groqKey = aiSettings.value.groqKey;
+    const geminiModel = aiSettings.value.geminiModel;
+
+    voiceInterimText.value = 'Recording (Auto-Send mode)... Click Mic+Send again to finish & send.';
+    sttInstance.start({ provider, geminiKey, groqKey, geminiModel })
+      .catch(err => {
+        console.error('Failed to start voice recognition:', err);
+        handleIncomingMessage(`Voice Error: ${err.message}`, true);
+        voiceInterimText.value = '';
+        isMicAutoSending.value = false;
+      });
+  }
+}
+
 // Handle voice capture finalized event
 function handleVoiceInputFinalized(text) {
   voiceInterimText.value = '';
+  const autoSend = isMicAutoSending.value;
+  isMicAutoSending.value = false; // reset flag
   if (!text) return;
-  // Fill the input area with transcribed text for the user to review/edit
+
+  // Fill the input area with transcribed text
   newQuestion.value = text;
+  if (autoSend) {
+    sendQuestion();
+  }
 }
 
 // Send query to AI provider
@@ -669,8 +704,10 @@ function closeApp() {
       v-if="showChatInput"
       v-model="newQuestion"
       :is-mic-listening="isMicListening"
+      :is-mic-auto-sending="isMicAutoSending"
       :is-loading="isLoading"
       @toggle-mic="toggleMic"
+      @toggle-mic-autosend="toggleMicAutoSend"
       @submit="sendQuestion"
       @cancel="cancelCurrentAction"
     />

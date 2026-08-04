@@ -9,13 +9,17 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  isMicAutoSending: {
+    type: Boolean,
+    default: false
+  },
   isLoading: {
     type: Boolean,
     default: false
   }
 });
 
-const emit = defineEmits(['toggle-mic', 'submit', 'cancel']);
+const emit = defineEmits(['toggle-mic', 'toggle-mic-autosend', 'submit', 'cancel']);
 
 const handleSubmit = () => {
   if (modelValue.value.trim() && !props.isLoading) {
@@ -26,12 +30,11 @@ const handleSubmit = () => {
 
 <template>
   <footer class="chat-input-bar">
-    <!-- Microphone Button -->
-    <button 
-      class="btn-icon btn-mic" 
-      :class="{ 'recording': isMicListening }" 
-      @click="$emit('toggle-mic')" 
-      :title="isMicListening ? 'Stop Voice Detection' : 'Start Voice Detection'"
+    <!-- Standard Microphone Button (Review Before Send) -->
+    <button
+      class="btn-icon btn-mic"
+      :class="{ 'recording': isMicListening && !isMicAutoSending }"
+      @click="$emit('toggle-mic')"
       type="button"
     >
       <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -42,11 +45,29 @@ const handleSubmit = () => {
       </svg>
     </button>
 
+    <!-- Combined Mic + Send Button (Record, Transcribe & Auto-Send) -->
+    <button
+      class="btn-icon btn-mic-autosend"
+      :class="{ 'recording': isMicAutoSending }"
+      @click="$emit('toggle-mic-autosend')"
+      type="button"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Microphone -->
+        <path d="M9 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+        <path d="M15 10v1a6 6 0 0 1-12 0v-1"></path>
+        <line x1="9" y1="17" x2="9" y2="21"></line>
+        <!-- Fast Send Arrow -->
+        <path d="M16 4l5 4-5 4"></path>
+        <line x1="21" y1="8" x2="14" y2="8"></line>
+      </svg>
+    </button>
+
     <!-- Cancel Request Button -->
-    <button 
+    <button
       v-if="isLoading || isMicListening"
-      class="btn-icon btn-cancel" 
-      @click="$emit('cancel')" 
+      class="btn-icon btn-cancel"
+      @click="$emit('cancel')"
       title="Cancel Active Action (Cmd+C / Esc)"
       type="button"
     >
@@ -62,11 +83,11 @@ const handleSubmit = () => {
       @keydown.enter.exact.prevent="handleSubmit"
       rows="1"
     ></textarea>
-    
-    <button 
-      class="btn-send" 
-      @click="$emit('submit')" 
-      :disabled="isLoading || !modelValue.trim()" 
+
+    <button
+      class="btn-send"
+      @click="$emit('submit')"
+      :disabled="isLoading || !modelValue.trim()"
       title="Send Question"
       type="button"
     >
