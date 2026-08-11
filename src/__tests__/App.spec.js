@@ -149,6 +149,6 @@ describe('App.vue Main Controller', () => {
     // Verify it added a combined response to UI
     const combinedMsg = vm.messages.find(m => m.label === 'Combined AI Response');
     expect(combinedMsg).toBeTruthy();
-    expect(combinedMsg.text).toBe('Mocked AI Answer');
+    expect(combinedMsg.text).toBe('Checkpoint Answer Part 1\n\nRemaining Answer Part 2');
   });
 });

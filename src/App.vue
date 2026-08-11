@@ -773,7 +773,7 @@ async function sendSegmentedQuestion(query, type) {
   }
 }
 
-// Blend/combine Part 1 and Part 2 responses using AI (Cmd+Shift+K)
+// Blend/combine Part 1 and Part 2 responses (Cmd+Shift+K)
 async function combineResponses() {
   const answer1 = lastCheckpointResponse.value.trim();
   const answer2 = lastRemainingResponse.value.trim();
@@ -783,78 +783,26 @@ async function combineResponses() {
     return;
   }
 
-  let apiKey = '';
-  let modelName = '';
-  const provider = aiSettings.value.provider;
+  // Simply concatenate the two parts locally instead of hitting the API
+  const combinedText = `${answer1}\n\n${answer2}`;
 
-  if (provider === 'gemini') {
-    apiKey = aiSettings.value.geminiKey;
-    modelName = aiSettings.value.geminiModel;
-  } else if (provider === 'groq') {
-    apiKey = aiSettings.value.groqKey;
-    modelName = aiSettings.value.groqModel;
-  } else if (provider === 'openrouter') {
-    apiKey = aiSettings.value.openrouterKey;
-    modelName = aiSettings.value.openrouterModel;
-  } else if (provider === 'github') {
-    apiKey = aiSettings.value.githubKey;
-    modelName = aiSettings.value.githubModel;
+  // Push combined response message to UI
+  messages.value.push({
+    id: 'combined-' + Date.now(),
+    text: combinedText,
+    time: `0/${totalSessionTokens.value}`,
+    label: 'Combined AI Response',
+    isAi: true
+  });
+
+  if (settings.value.teleprompterEnabled) {
+    runTeleprompter(combinedText);
   }
 
-  if (!apiKey) {
-    handleIncomingMessage(`Error: API Key is missing for AI provider "${provider}".`, true);
-    return;
-  }
-
-  isLoading.value = true;
-  activeAbortController = new AbortController();
-
-  // Unified blending prompt
-  const blendPrompt = `Combine and blend the following two parts of my interview response into a single, cohesive, unified answer. Avoid duplicate sentences, remove transition filler, and format it professionally.\n\nFirst Part Response:\n${answer1}\n\nSecond Part Response:\n${answer2}`;
-
-  try {
-    const aiResult = await sendChatMessage({
-      provider,
-      apiKey,
-      model: modelName,
-      // Use the user's own system instruction so the AI matches their configured
-      // style and tone. Do NOT inject persona/resumeText — this is an editing
-      // task, not an interview answer, so injecting the full resume would bloat
-      // the context and produce an unnecessarily verbose combined response.
-      systemInstruction: aiSettings.value.systemInstruction,
-      history: [{ role: 'user', content: blendPrompt }],
-      persona: null,
-      resumeText: null,
-      signal: activeAbortController.signal
-    });
-
-    const combinedText = aiResult.text;
-    const usage = aiResult.usage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
-    totalSessionTokens.value += usage.totalTokens;
-
-    // Push combined response message to UI
-    messages.value.push({
-      id: 'combined-' + Date.now(),
-      text: combinedText,
-      time: `${usage.completionTokens}/${totalSessionTokens.value}`,
-      label: 'Combined AI Response',
-      isAi: true
-    });
-
-    if (settings.value.teleprompterEnabled) {
-      runTeleprompter(combinedText);
-    }
-  } catch (err) {
-    console.error('Failed to combine responses:', err);
-    handleIncomingMessage(`Combine Error: ${err.message}`, true);
-  } finally {
-    isLoading.value = false;
-    activeAbortController = null;
-    // Reset flags after combination is complete
-    lastCheckpointResponse.value = '';
-    lastRemainingResponse.value = '';
-    hasCheckpointSent.value = false;
-  }
+  // Reset flags after combination is complete
+  lastCheckpointResponse.value = '';
+  lastRemainingResponse.value = '';
+  hasCheckpointSent.value = false;
 }
 
 // Send query to AI provider
