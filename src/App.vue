@@ -18,7 +18,8 @@ window.Pusher = Pusher;
 // Define default Reverb configuration
 const DEFAULT_SETTINGS = {
   host: 'ws.helper-ext.larawork.com',
-  port: '443',
+  port: '443',                 // WebSocket Reverb port
+  apiPort: '8000',             // Web API HTTP port (Laravel Web Server)
   appKey: 'datgek4pdi3rxen8drie',
   scheme: 'https',
   channel: 'interview',
@@ -227,13 +228,15 @@ function connectEcho() {
 
   try {
     const useTLS = settings.value.scheme === 'https';
+    let wsHost = (settings.value.host || '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '').replace(/:\d+$/, '');
+    const wsPort = parseInt(settings.value.port) || (useTLS ? 443 : 80);
 
     echoInstance = new Echo({
       broadcaster: 'reverb',
       key: settings.value.appKey,
-      wsHost: settings.value.host,
-      wsPort: parseInt(settings.value.port) || 80,
-      wssPort: parseInt(settings.value.port) || 443,
+      wsHost: wsHost,
+      wsPort: wsPort,
+      wssPort: wsPort,
       forceTLS: useTLS,
       enabledTransports: ['ws', 'wss'],
       disableStats: true

@@ -114,4 +114,15 @@ describe('SettingsOverlay.vue', () => {
 
     expect(wrapper.emitted('clear-messages')).toBeTruthy();
   });
+
+  it('renders Fetch All button in header and emits clear-messages on sync', async () => {
+    const wrapper = mount(SettingsOverlay, {
+      props: defaultProps
+    });
+
+    const syncAllBtn = wrapper.find('.btn-sync-all');
+    expect(syncAllBtn.exists()).toBe(true);
+    expect(syncAllBtn.text()).toContain('Fetch All');
+  });
 });
+

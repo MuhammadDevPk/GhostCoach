@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { parseResumeFile } from '../services/fileParser';
+import { fetchRemoteProfile } from '../services/profileSync';
 
 const props = defineProps({
   settings: {
@@ -95,6 +96,60 @@ watch(() => props.activeMode, (newVal) => {
   localActiveMode.value = newVal;
 });
 
+const isSyncing = ref({
+  all: false,
+  ai_training: false,
+  candidate_profile: false,
+  resume: false
+});
+
+const syncStatus = ref({ text: '', isError: false });
+
+const handleRemoteSync = async (target = 'all') => {
+  isSyncing.value[target] = true;
+  syncStatus.value = { text: '', isError: false };
+
+  try {
+    const updates = await fetchRemoteProfile({
+      settings: localSettings.value,
+      target
+    });
+
+    if (updates.systemInstruction !== undefined) {
+      localAiSettings.value.systemInstruction = updates.systemInstruction;
+    }
+    if (updates.persona !== undefined) {
+      localAiSettings.value.persona = updates.persona;
+    }
+    if (updates.resumeText !== undefined) {
+      localAiSettings.value.resumeText = updates.resumeText;
+      localAiSettings.value.resumeFileName = updates.resumeFileName || 'remote_resume.pdf';
+    }
+
+    // Auto save updated settings
+    handleSave();
+
+    // Clear feed & chat history so AI context starts fresh with the new candidate profile
+    emit('clear-messages');
+
+    let msg = 'Profile data synchronized successfully!';
+    if (target === 'ai_training') msg = 'AI Training Guidelines synchronized!';
+    else if (target === 'candidate_profile') msg = 'Candidate Persona synchronized!';
+    else if (target === 'resume') msg = 'Remote Resume fetched & parsed!';
+
+    if (updates.resumeError) {
+      msg += ` (Note: ${updates.resumeError})`;
+    }
+
+    syncStatus.value = { text: msg, isError: false };
+  } catch (err) {
+    console.error('Failed to sync remote profile:', err);
+    syncStatus.value = { text: err.message || 'Sync failed.', isError: true };
+  } finally {
+    isSyncing.value[target] = false;
+  }
+};
+
 const handleSave = () => {
   emit('save', {
     settings: JSON.parse(JSON.stringify(localSettings.value)),
@@ -106,14 +161,30 @@ const handleSave = () => {
 
 <template>
   <div class="settings-overlay">
-    <div class="settings-header">
+    <div class="settings-header" style="align-items: center; justify-content: space-between;">
       <h3 class="settings-title">Ghost Coach Config</h3>
-      <button class="btn-icon" @click="$emit('close')" >
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button
+          type="button"
+          class="btn-sync-all"
+          style="font-size: 11px; padding: 4px 10px; margin: 0; background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); display: flex; align-items: center; gap: 4px; border-radius: 6px; cursor: pointer;"
+          :disabled="isSyncing.all"
+          @click="handleRemoteSync('all')"
+          title="Fetch All 3 Profile Parts (AI Training, Persona & Resume) from Server and clear chat history"
+        >
+          <span v-if="isSyncing.all" class="btn-spinner" style="width: 10px; height: 10px;"></span>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+          </svg>
+          {{ isSyncing.all ? 'Syncing...' : 'Fetch All' }}
+        </button>
+        <button class="btn-icon" @click="$emit('close')" >
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
       </button>
+      </div>
     </div>
 
     <!-- Tab Navigation -->
@@ -152,17 +223,28 @@ const handleSave = () => {
       </button>
     </div>
 
+    <!-- Sync Status Notification Banner -->
+    <div v-if="syncStatus.text" style="margin: 8px 16px 0; padding: 8px 12px; border-radius: 6px; font-size: 11px; display: flex; justify-content: space-between; align-items: center;" :style="{ background: syncStatus.isError ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)', color: syncStatus.isError ? '#ef4444' : '#10b981', border: syncStatus.isError ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)' }">
+      <span>{{ syncStatus.text }}</span>
+      <button @click="syncStatus.text = ''" style="background: transparent; border: none; color: inherit; cursor: pointer; font-weight: bold; margin-left: 8px;" type="button">✕</button>
+    </div>
+
     <div class="settings-form">
       <!-- WebSocket Tab Contents -->
       <template v-if="activeSettingsTab === 'websocket'">
         <div class="form-group">
           <label>Host Domain</label>
-          <input v-model="localSettings.host" type="text" placeholder="e.g. yourdomain.com" />
+          <input v-model="localSettings.host" type="text" placeholder="e.g. localhost or yourdomain.com" />
         </div>
 
         <div class="form-group">
-          <label>Port</label>
-          <input v-model="localSettings.port" type="text" placeholder="e.g. 443" />
+          <label>WebSocket Reverb Port</label>
+          <input v-model="localSettings.port" type="text" placeholder="e.g. 8080 or 443" />
+        </div>
+
+        <div class="form-group">
+          <label>Web API HTTP Port (Laravel Web Server)</label>
+          <input v-model="localSettings.apiPort" type="text" placeholder="e.g. 8000" />
         </div>
 
         <div class="form-group">
@@ -413,7 +495,19 @@ const handleSave = () => {
         </div>
 
         <div class="form-group">
-          <label>AI Guidance Instructions (System Prompt)</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="margin: 0;">AI Guidance Instructions (System Prompt)</label>
+            <button
+              type="button"
+              style="font-size: 10px; padding: 3px 8px; background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px;"
+              :disabled="isSyncing.ai_training"
+              @click="handleRemoteSync('ai_training')"
+              title="Fetch AI Training guidelines from server & clear chat"
+            >
+              <span v-if="isSyncing.ai_training" class="btn-spinner" style="width: 8px; height: 8px;"></span>
+              <span>📡 Fetch Guidelines</span>
+            </button>
+          </div>
           <textarea
             v-model="localAiSettings.systemInstruction"
             class="form-textarea"
@@ -426,7 +520,19 @@ const handleSave = () => {
       <!-- Candidate Profile Tab Contents -->
       <template v-else-if="activeSettingsTab === 'candidate'">
         <div class="form-group">
-          <label>Your Persona / Interview Persona</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="margin: 0;">Your Persona / Interview Persona</label>
+            <button
+              type="button"
+              style="font-size: 10px; padding: 3px 8px; background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px;"
+              :disabled="isSyncing.candidate_profile"
+              @click="handleRemoteSync('candidate_profile')"
+              title="Fetch Candidate Persona summary from server & clear chat"
+            >
+              <span v-if="isSyncing.candidate_profile" class="btn-spinner" style="width: 8px; height: 8px;"></span>
+              <span>📡 Fetch Persona</span>
+            </button>
+          </div>
           <textarea
             v-model="localAiSettings.persona"
             class="form-textarea"
@@ -436,7 +542,19 @@ const handleSave = () => {
         </div>
 
         <div class="form-group">
-          <label>Upload Resume (.txt, .pdf, .docx)</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="margin: 0;">Upload Resume (.txt, .pdf, .docx)</label>
+            <button
+              type="button"
+              style="font-size: 10px; padding: 3px 8px; background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px;"
+              :disabled="isSyncing.resume"
+              @click="handleRemoteSync('resume')"
+              title="Fetch & parse remote resume PDF/document from server & clear chat"
+            >
+              <span v-if="isSyncing.resume" class="btn-spinner" style="width: 8px; height: 8px;"></span>
+              <span>📡 Fetch Remote Resume</span>
+            </button>
+          </div>
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <input
               type="file"
