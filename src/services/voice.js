@@ -75,35 +75,11 @@ export class SpeechToText {
 
           if (shouldTranscribe && audioBlob.size > 100) {
             try {
-              let text = '';
-
-              const hasGroq = Array.isArray(this.groqKey)
-                ? this.groqKey.some(k => typeof k === 'string' && k.trim() !== '')
-                : typeof this.groqKey === 'string' && this.groqKey.trim() !== '';
-
-              const hasGemini = Array.isArray(this.geminiKey)
-                ? this.geminiKey.some(k => typeof k === 'string' && k.trim() !== '')
-                : typeof this.geminiKey === 'string' && this.geminiKey.trim() !== '';
-
-              if (hasGroq) {
-                try {
-                  text = await this.transcribeViaGroqWhisper(audioBlob);
-                } catch (err) {
-                  console.warn('All Groq Whisper keys failed. Attempting Gemini fallback...', err.message);
-                  if (hasGemini) {
-                    text = await this.transcribeViaGemini(audioBlob);
-                  } else {
-                    throw err;
-                  }
-                }
-              } else if (hasGemini) {
-                text = await this.transcribeViaGemini(audioBlob);
-              }
-
+              const text = await this.transcribeBlob(audioBlob);
               if (this.onTranscript) {
-                this.onTranscript(text.trim());
+                this.onTranscript(text);
               }
-              resolve(text.trim());
+              resolve(text);
             } catch (err) {
               console.error('Transcription failed:', err);
               if (this.onError) this.onError(`Transcription Error: ${err.message || err}`);
@@ -120,6 +96,87 @@ export class SpeechToText {
         resolve('');
       }
     });
+  }
+
+  /**
+   * Seamlessly stop the current recorder to compile the audio recorded so far,
+   * clear the buffer, and start a new recorder instance on the same active stream.
+   * @returns {Promise<Blob|null>}
+   */
+  async getCheckpointBlob() {
+    if (!this.isRecording || !this.mediaRecorder || this.mediaRecorder.state === 'inactive') {
+      return null;
+    }
+
+    return new Promise((resolve) => {
+      // Swapping stop callback to extract current buffer and restart recording
+      const originalOnStop = this.mediaRecorder.onstop;
+
+      this.mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(this.audioChunks, { type: this.mediaRecorder.mimeType || 'audio/webm' });
+        this.audioChunks = [];
+
+        // Restart recording on the same stream tracks
+        try {
+          let options = {};
+          if (MediaRecorder.isTypeSupported('audio/webm')) {
+            options = { mimeType: 'audio/webm' };
+          } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+            options = { mimeType: 'audio/ogg' };
+          }
+
+          this.mediaRecorder = new MediaRecorder(this.stream, options);
+          this.mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) {
+              this.audioChunks.push(e.data);
+            }
+          };
+
+          this.mediaRecorder.onstop = originalOnStop;
+          this.mediaRecorder.start();
+        } catch (err) {
+          console.error('Failed to restart MediaRecorder for checkpoint:', err);
+        }
+
+        resolve(audioBlob.size > 100 ? audioBlob : null);
+      };
+
+      this.mediaRecorder.stop();
+    });
+  }
+
+  /**
+   * Transcribes a given audio blob using Groq or Gemini endpoints
+   * @param {Blob} audioBlob 
+   * @returns {Promise<string>}
+   */
+  async transcribeBlob(audioBlob) {
+    if (!audioBlob || audioBlob.size <= 100) return '';
+
+    const hasGroq = Array.isArray(this.groqKey)
+      ? this.groqKey.some(k => typeof k === 'string' && k.trim() !== '')
+      : typeof this.groqKey === 'string' && this.groqKey.trim() !== '';
+
+    const hasGemini = Array.isArray(this.geminiKey)
+      ? this.geminiKey.some(k => typeof k === 'string' && k.trim() !== '')
+      : typeof this.geminiKey === 'string' && this.geminiKey.trim() !== '';
+
+    let text = '';
+    if (hasGroq) {
+      try {
+        text = await this.transcribeViaGroqWhisper(audioBlob);
+      } catch (err) {
+        console.warn('All Groq Whisper keys failed. Attempting Gemini fallback...', err.message);
+        if (hasGemini) {
+          text = await this.transcribeViaGemini(audioBlob);
+        } else {
+          throw err;
+        }
+      }
+    } else if (hasGemini) {
+      text = await this.transcribeViaGemini(audioBlob);
+    }
+    return text.trim();
   }
 
   /**

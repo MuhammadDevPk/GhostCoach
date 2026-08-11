@@ -13,7 +13,7 @@
  * @param {AbortSignal} [params.signal] - Optional signal to abort the request
  * @returns {Promise<string>} The response text from the AI
  */
-export async function sendChatMessage({ provider, apiKey, model, systemInstruction, history, persona, resumeText, signal }) {
+export async function sendChatMessage({ provider, apiKey, model, systemInstruction, history, persona, resumeText, skipHumanizerReminder, signal }) {
   // Normalize apiKey parameter to a list of non-empty strings
   const keys = (Array.isArray(apiKey) ? apiKey : [apiKey])
     .map(k => typeof k === 'string' ? k.trim() : '')
@@ -113,7 +113,9 @@ This checklist reduces surface-level "AI tells" but can't guarantee text will pa
   const humanizerReminder = `[STYLE REMINDER] You MUST follow the Humanizer style guide from the system prompt. Do NOT use words like: delve, leverage, robust, multifaceted, tapestry, furthermore, moreover. Do NOT use rule-of-three lists. Do NOT use "It's not X, it's Y" patterns. Vary sentence length. Be specific, not generic. Write like a real human speaks — imperfect, direct, concrete. No AI fluff.`;
 
   const augmentedHistory = [...trimmedHistory];
-  if (augmentedHistory.length >= 1) {
+  // Skip the humanizerReminder injection for segmented calls to save ~300 tokens.
+  // Segmented calls already fire consecutively and are the main cause of TPM overruns.
+  if (!skipHumanizerReminder && augmentedHistory.length >= 1) {
     // Insert reminder as the second-to-last message (right before the user's final query)
     const lastMsg = augmentedHistory.pop();
     augmentedHistory.push({ role: 'user', content: humanizerReminder });

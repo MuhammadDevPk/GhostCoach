@@ -169,6 +169,20 @@ app.whenReady().then(() => {
     }
   });
 
+  // Register partial checkpoint record shortcut (Cmd+Shift+P / Ctrl+Shift+P)
+  globalShortcut.register('CommandOrControl+Shift+P', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('checkpoint-record');
+    }
+  });
+
+  // Register combine responses shortcut (Cmd+Shift+K / Ctrl+Shift+K)
+  globalShortcut.register('CommandOrControl+Shift+K', () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('combine-responses');
+    }
+  });
+
   // Register global cancel shortcut (Cmd+Shift+C / Ctrl+Shift+C)
   globalShortcut.register('CommandOrControl+Shift+C', () => {
     if (mainWindow) {

@@ -78,6 +78,11 @@ const isMicAutoSending = ref(false);
 const voiceInterimText = ref('');
 let sttInstance = null;
 
+// Segmented Voice Sync and Blending States
+const lastCheckpointResponse = ref('');
+const lastRemainingResponse = ref('');
+const hasCheckpointSent = ref(false);
+
 // Active Echo instance pointer
 let echoInstance = null;
 
@@ -152,6 +157,20 @@ onMounted(() => {
   if (window.electronAPI && typeof window.electronAPI.onToggleRecord === 'function') {
     window.electronAPI.onToggleRecord(() => {
       toggleMic();
+    });
+  }
+
+  // Listen for global shortcut partial checkpoint record from main process
+  if (window.electronAPI && typeof window.electronAPI.onCheckpointRecord === 'function') {
+    window.electronAPI.onCheckpointRecord(() => {
+      handleCheckpointRecord();
+    });
+  }
+
+  // Listen for global shortcut combine responses from main process
+  if (window.electronAPI && typeof window.electronAPI.onCombineResponses === 'function') {
+    window.electronAPI.onCombineResponses(() => {
+      combineResponses();
     });
   }
 
@@ -504,6 +523,11 @@ function toggleMic() {
     });
   } else {
     isMicAutoSending.value = false;
+    // Clear recent/latest response references for a clean session
+    lastCheckpointResponse.value = '';
+    lastRemainingResponse.value = '';
+    hasCheckpointSent.value = false;
+
     // Extract active provider and API keys for transcription
     const provider = aiSettings.value.provider;
     const geminiKey = aiSettings.value.geminiKey;
@@ -530,6 +554,11 @@ function toggleMicAutoSend() {
     });
   } else {
     isMicAutoSending.value = true;
+    // Clear recent/latest response references for a clean session
+    lastCheckpointResponse.value = '';
+    lastRemainingResponse.value = '';
+    hasCheckpointSent.value = false;
+
     const provider = aiSettings.value.provider;
     const geminiKey = aiSettings.value.geminiKey;
     const groqKey = aiSettings.value.groqKey;
@@ -546,6 +575,38 @@ function toggleMicAutoSend() {
   }
 }
 
+// Handle partial/checkpoint transcription shortcut (Cmd+Shift+P) during listening
+async function handleCheckpointRecord() {
+  if (!isMicListening.value || !sttInstance) return;
+
+  voiceInterimText.value = 'Capturing partial audio checkpoint...';
+  try {
+    const audioBlob = await sttInstance.getCheckpointBlob();
+    if (!audioBlob) {
+      voiceInterimText.value = 'Recording (no new checkpoint audio)...';
+      return;
+    }
+
+    voiceInterimText.value = 'Transcribing partial audio...';
+    const text = await sttInstance.transcribeBlob(audioBlob);
+    if (!text) {
+      voiceInterimText.value = 'Recording (empty checkpoint)...';
+      return;
+    }
+
+    // Mark checkpoint as sent BEFORE awaiting AI so that if the user
+    // stops recording while the AI is still generating, handleVoiceInputFinalized
+    // correctly routes the remaining audio to Part 2 instead of normal send.
+    hasCheckpointSent.value = true;
+    voiceInterimText.value = 'Checkpoint sent. Still listening...';
+    await sendSegmentedQuestion(text, 'checkpoint');
+  } catch (err) {
+    console.error('Failed to handle checkpoint recording:', err);
+    handleIncomingMessage(`Checkpoint Error: ${err.message}`, true);
+    voiceInterimText.value = 'Recording (checkpoint failed)...';
+  }
+}
+
 // Handle voice capture finalized event
 function handleVoiceInputFinalized(text) {
   voiceInterimText.value = '';
@@ -553,10 +614,246 @@ function handleVoiceInputFinalized(text) {
   isMicAutoSending.value = false; // reset flag
   if (!text) return;
 
-  // Fill the input area with transcribed text
-  newQuestion.value = text;
-  if (autoSend) {
-    sendQuestion();
+  if (hasCheckpointSent.value) {
+    // We already sent part 1, so this is the remaining audio (part 2)
+    sendSegmentedQuestion(text, 'remaining');
+  } else {
+    // Normal single-segment voice submission
+    newQuestion.value = text;
+    if (autoSend) {
+      sendQuestion();
+    }
+  }
+}
+
+// Send segmented query to AI provider (keeps feed clean and labels steps)
+async function sendSegmentedQuestion(query, type) {
+  if (!query) return;
+
+  // If an AI call is already in flight (e.g. checkpoint is still generating),
+  // wait for it to finish instead of silently dropping the remaining audio.
+  if (isLoading.value) {
+    await new Promise(resolve => {
+      const timer = setInterval(() => {
+        if (!isLoading.value) { clearInterval(timer); resolve(); }
+      }, 300);
+    });
+  }
+
+  let apiKey = '';
+  let modelName = '';
+  const provider = aiSettings.value.provider;
+
+  if (provider === 'gemini') {
+    apiKey = aiSettings.value.geminiKey;
+    modelName = aiSettings.value.geminiModel;
+  } else if (provider === 'groq') {
+    apiKey = aiSettings.value.groqKey;
+    modelName = aiSettings.value.groqModel;
+  } else if (provider === 'openrouter') {
+    apiKey = aiSettings.value.openrouterKey;
+    modelName = aiSettings.value.openrouterModel;
+  } else if (provider === 'github') {
+    apiKey = aiSettings.value.githubKey;
+    modelName = aiSettings.value.githubModel;
+  }
+
+  if (!apiKey) {
+    handleIncomingMessage(`Error: API Key is missing for AI provider "${provider}".`, true);
+    return;
+  }
+
+  const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const labelSuffix = type === 'checkpoint' ? ' [Part 1]' : ' [Part 2]';
+
+  // Add User bubble to UI
+  messages.value.push({
+    id: 'user-' + Date.now() + Math.random().toString(36).substr(2, 9),
+    text: query,
+    time: timestamp,
+    label: 'You' + labelSuffix,
+    isUser: true
+  });
+
+  // Append user turn to context history
+  chatHistory.value.push({ role: 'user', content: query });
+
+  isLoading.value = true;
+  activeAbortController = new AbortController();
+
+  // Rate-limit aware retry loop — Groq TPM limits can be hit when +P and +L
+  // fire two large calls within the same 60-second window. The error message
+  // tells us exactly how long to wait ("try again in 4.27s"), so we parse it
+  // and retry automatically instead of surfacing a confusing error.
+  const MAX_RATE_RETRIES = 2;
+  let lastError = null;
+
+  for (let attempt = 0; attempt < MAX_RATE_RETRIES; attempt++) {
+    try {
+      activeAbortController = new AbortController();
+      const aiResult = await sendChatMessage({
+        provider,
+        apiKey,
+        model: modelName,
+        systemInstruction: aiSettings.value.systemInstruction,
+        history: chatHistory.value,
+        persona: aiSettings.value.persona,
+        resumeText: aiSettings.value.resumeText,
+        skipHumanizerReminder: true, // saves ~300 tokens per segmented call to reduce TPM pressure
+        signal: activeAbortController.signal
+      });
+
+      const responseText = aiResult.text;
+      const usage = aiResult.usage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+      totalSessionTokens.value += usage.totalTokens;
+
+      // Save response pointers
+      if (type === 'checkpoint') {
+        lastCheckpointResponse.value = responseText;
+      } else if (type === 'remaining') {
+        lastRemainingResponse.value = responseText;
+      }
+
+      // Add AI response bubble
+      messages.value.push({
+        id: 'ai-' + Date.now() + Math.random().toString(36).substr(2, 9),
+        text: responseText,
+        time: `${usage.completionTokens}/${totalSessionTokens.value}`,
+        label: 'AI Guide' + labelSuffix,
+        isAi: true
+      });
+
+      chatHistory.value.push({ role: 'assistant', content: responseText });
+
+      if (settings.value.teleprompterEnabled) {
+        runTeleprompter(responseText);
+      }
+
+      // Success — exit retry loop
+      lastError = null;
+      break;
+
+    } catch (error) {
+      lastError = error;
+
+      // Abort errors should never be retried
+      if (error.name === 'AbortError') break;
+
+      // Detect rate-limit errors (429 / TPM exceeded)
+      const isRateLimit = /rate.?limit|429|tokens per minute|TPM|try again in/i.test(error.message);
+
+      if (isRateLimit && attempt < MAX_RATE_RETRIES - 1) {
+        // Parse "try again in X.XX s" from the Groq error message, fall back to 8s
+        const waitMatch = error.message.match(/try again in (\d+(?:\.\d+)?)/i);
+        const waitSec = waitMatch ? Math.ceil(parseFloat(waitMatch[1])) + 1 : 8;
+
+        console.warn(`Rate limit hit for segmented call (${type}), retrying in ${waitSec}s...`);
+
+        // Show a live countdown so the user knows what's happening
+        for (let s = waitSec; s > 0; s--) {
+          voiceInterimText.value = `Rate limit — retrying in ${s}s...`;
+          await new Promise(r => setTimeout(r, 1000));
+        }
+        voiceInterimText.value = 'Retrying...';
+        continue;
+      }
+
+      // Non-rate-limit error or out of retries — surface it
+      break;
+    }
+  }
+
+  isLoading.value = false;
+  activeAbortController = null;
+  voiceInterimText.value = ''; // always clear countdown/retry text when done
+
+  if (lastError && lastError.name !== 'AbortError') {
+    console.error(`Segmented sync failure (${type}):`, lastError);
+    handleIncomingMessage(`Sync Error (${type}): ${lastError.message}`, true);
+  }
+}
+
+// Blend/combine Part 1 and Part 2 responses using AI (Cmd+Shift+K)
+async function combineResponses() {
+  const answer1 = lastCheckpointResponse.value.trim();
+  const answer2 = lastRemainingResponse.value.trim();
+
+  if (!answer1 || !answer2) {
+    handleIncomingMessage("Cannot combine responses: You must first record a segmented voice session with a checkpoint.", true);
+    return;
+  }
+
+  let apiKey = '';
+  let modelName = '';
+  const provider = aiSettings.value.provider;
+
+  if (provider === 'gemini') {
+    apiKey = aiSettings.value.geminiKey;
+    modelName = aiSettings.value.geminiModel;
+  } else if (provider === 'groq') {
+    apiKey = aiSettings.value.groqKey;
+    modelName = aiSettings.value.groqModel;
+  } else if (provider === 'openrouter') {
+    apiKey = aiSettings.value.openrouterKey;
+    modelName = aiSettings.value.openrouterModel;
+  } else if (provider === 'github') {
+    apiKey = aiSettings.value.githubKey;
+    modelName = aiSettings.value.githubModel;
+  }
+
+  if (!apiKey) {
+    handleIncomingMessage(`Error: API Key is missing for AI provider "${provider}".`, true);
+    return;
+  }
+
+  isLoading.value = true;
+  activeAbortController = new AbortController();
+
+  // Unified blending prompt
+  const blendPrompt = `Combine and blend the following two parts of my interview response into a single, cohesive, unified answer. Avoid duplicate sentences, remove transition filler, and format it professionally.\n\nFirst Part Response:\n${answer1}\n\nSecond Part Response:\n${answer2}`;
+
+  try {
+    const aiResult = await sendChatMessage({
+      provider,
+      apiKey,
+      model: modelName,
+      // Use the user's own system instruction so the AI matches their configured
+      // style and tone. Do NOT inject persona/resumeText — this is an editing
+      // task, not an interview answer, so injecting the full resume would bloat
+      // the context and produce an unnecessarily verbose combined response.
+      systemInstruction: aiSettings.value.systemInstruction,
+      history: [{ role: 'user', content: blendPrompt }],
+      persona: null,
+      resumeText: null,
+      signal: activeAbortController.signal
+    });
+
+    const combinedText = aiResult.text;
+    const usage = aiResult.usage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+    totalSessionTokens.value += usage.totalTokens;
+
+    // Push combined response message to UI
+    messages.value.push({
+      id: 'combined-' + Date.now(),
+      text: combinedText,
+      time: `${usage.completionTokens}/${totalSessionTokens.value}`,
+      label: 'Combined AI Response',
+      isAi: true
+    });
+
+    if (settings.value.teleprompterEnabled) {
+      runTeleprompter(combinedText);
+    }
+  } catch (err) {
+    console.error('Failed to combine responses:', err);
+    handleIncomingMessage(`Combine Error: ${err.message}`, true);
+  } finally {
+    isLoading.value = false;
+    activeAbortController = null;
+    // Reset flags after combination is complete
+    lastCheckpointResponse.value = '';
+    lastRemainingResponse.value = '';
+    hasCheckpointSent.value = false;
   }
 }
 

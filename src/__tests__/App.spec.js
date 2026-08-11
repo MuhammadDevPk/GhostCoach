@@ -16,8 +16,10 @@ vi.mock('../services/voice', () => ({
   stopSpeechRecognition: vi.fn(),
   SpeechToText: class {
     constructor() {}
-    start() {}
-    stop() {}
+    start() { return Promise.resolve(); }
+    stop() { return Promise.resolve('Mocked STT text'); }
+    transcribeBlob() { return Promise.resolve('Mocked STT text'); }
+    getCheckpointBlob() { return Promise.resolve(new Blob()); }
   }
 }));
 
@@ -133,5 +135,20 @@ describe('App.vue Main Controller', () => {
       { role: 'assistant', content: 'Answer 1' },
       { role: 'assistant', content: 'Answer 2' }
     ]);
+  });
+
+  it('can store checkpoint and remaining responses, then combine them', async () => {
+    const wrapper = mount(App);
+    const vm = wrapper.vm;
+
+    vm.lastCheckpointResponse = 'Checkpoint Answer Part 1';
+    vm.lastRemainingResponse = 'Remaining Answer Part 2';
+
+    await vm.combineResponses();
+
+    // Verify it added a combined response to UI
+    const combinedMsg = vm.messages.find(m => m.label === 'Combined AI Response');
+    expect(combinedMsg).toBeTruthy();
+    expect(combinedMsg.text).toBe('Mocked AI Answer');
   });
 });
