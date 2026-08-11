@@ -765,7 +765,16 @@ async function sendSegmentedQuestion(query, type) {
 
   isLoading.value = false;
   activeAbortController = null;
-  voiceInterimText.value = ''; // always clear countdown/retry text when done
+
+  // Restore the listening status text if the microphone is still active
+  // so the recording badge stays visible and continues pulsing in the UI.
+  if (isMicListening.value) {
+    voiceInterimText.value = isMicAutoSending.value
+      ? 'Recording (Auto-Send mode)... Click Mic+Send again to finish & send.'
+      : 'Recording voice... Click mic again to stop.';
+  } else {
+    voiceInterimText.value = '';
+  }
 
   if (lastError && lastError.name !== 'AbortError') {
     console.error(`Segmented sync failure (${type}):`, lastError);
