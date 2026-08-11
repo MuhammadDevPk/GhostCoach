@@ -33,6 +33,27 @@ const emit = defineEmits([
 const activeSettingsTab = ref('websocket');
 const isFileParsing = ref(false);
 
+const vAutoResize = {
+  mounted(el) {
+    const adjust = () => {
+      el.style.height = 'auto';
+      const offset = el.offsetHeight - el.clientHeight;
+      el.style.height = `${el.scrollHeight + offset}px`;
+    };
+    el.addEventListener('input', adjust);
+    adjust();
+    el._adjust = adjust;
+  },
+  updated(el) {
+    if (el._adjust) el._adjust();
+  },
+  unmounted(el) {
+    if (el._adjust) {
+      el.removeEventListener('input', el._adjust);
+    }
+  }
+};
+
 const handleFileUpload = async (event) => {
   const file = event.target.files[0];
   if (!file) return;
@@ -524,6 +545,7 @@ const handleRemoteSync = async (target = 'all') => {
           </div>
           <textarea
             v-model="localAiSettings.systemInstruction"
+            v-auto-resize
             class="form-textarea"
             rows="4"
             placeholder="e.g. your role is to answer human like interview questions..."
@@ -549,6 +571,7 @@ const handleRemoteSync = async (target = 'all') => {
           </div>
           <textarea
             v-model="localAiSettings.persona"
+            v-auto-resize
             class="form-textarea"
             rows="4"
             placeholder="e.g. You are Haider. Speak in a human-like, conversational tone. Be clear and structural..."

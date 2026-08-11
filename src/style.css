@@ -457,9 +457,9 @@ body {
   font-size: 13px;
   resize: none;
   outline: none;
-  height: 34px;
-  max-height: 80px;
-  transition: all 0.2s ease;
+  min-height: 34px;
+  max-height: 200px;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
   overflow-y: auto;
   user-select: text;
 }

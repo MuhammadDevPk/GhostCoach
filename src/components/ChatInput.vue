@@ -26,6 +26,27 @@ const handleSubmit = () => {
     emit('submit');
   }
 };
+
+const vAutoResize = {
+  mounted(el) {
+    const adjust = () => {
+      el.style.height = 'auto';
+      const offset = el.offsetHeight - el.clientHeight;
+      el.style.height = `${el.scrollHeight + offset}px`;
+    };
+    el.addEventListener('input', adjust);
+    adjust();
+    el._adjust = adjust;
+  },
+  updated(el) {
+    if (el._adjust) el._adjust();
+  },
+  unmounted(el) {
+    if (el._adjust) {
+      el.removeEventListener('input', el._adjust);
+    }
+  }
+};
 </script>
 
 <template>
@@ -78,6 +99,7 @@ const handleSubmit = () => {
 
     <textarea
       v-model="modelValue"
+      v-auto-resize
       placeholder="Ask AI Coach or speak..."
       @keydown.enter.exact.prevent="handleSubmit"
       rows="1"
