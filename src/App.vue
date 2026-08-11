@@ -192,6 +192,18 @@ onBeforeUnmount(() => {
   }
 });
 
+function handleSilentSave(payload) {
+  settings.value = payload.settings;
+  aiSettings.value = payload.aiSettings;
+  activeMode.value = payload.activeMode;
+  localStorage.setItem('reverb_settings', JSON.stringify(settings.value));
+  localStorage.setItem('ai_settings', JSON.stringify(aiSettings.value));
+  localStorage.setItem('active_mode', activeMode.value);
+  // No showSettings.value = false → panel stays open
+  // No connectEcho() → no WebSocket reconnect during sync
+}
+
+
 function increaseFont() {
   if (fontSize.value < 32) {
     fontSize.value += 1;
@@ -746,6 +758,7 @@ function closeApp() {
       :active-mode="activeMode"
       :messages-count="messages.length"
       @save="handleSaveSettings"
+      @save-silent="handleSilentSave"
       @reset-to-defaults="resetToDefaults"
       @clear-messages="clearMessages"
       @close="showSettings = false"

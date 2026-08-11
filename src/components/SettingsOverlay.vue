@@ -24,6 +24,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   'save',
+  'save-silent',
   'reset-to-defaults',
   'clear-messages',
   'close'
@@ -105,7 +106,22 @@ const isSyncing = ref({
 
 const syncStatus = ref({ text: '', isError: false });
 
+const handleSave = () => {
+  emit('save', {
+    settings: JSON.parse(JSON.stringify(localSettings.value)),
+    aiSettings: JSON.parse(JSON.stringify(localAiSettings.value)),
+    activeMode: localActiveMode.value
+  });
+};
+
 const handleRemoteSync = async (target = 'all') => {
+  // Guard against unexpected target values
+  const VALID_TARGETS = ['all', 'ai_training', 'candidate_profile', 'resume'];
+  if (!VALID_TARGETS.includes(target)) {
+    console.warn(`handleRemoteSync: unknown target "${target}" — ignoring.`);
+    return;
+  }
+
   isSyncing.value[target] = true;
   syncStatus.value = { text: '', isError: false };
 
@@ -127,10 +143,15 @@ const handleRemoteSync = async (target = 'all') => {
     }
 
     // Auto save updated settings
-    handleSave();
-
-    // Clear feed & chat history so AI context starts fresh with the new candidate profile
-    emit('clear-messages');
+    const hasRealUpdates = Object.keys(updates).filter(k => k!== 'resumeError').length > 0;
+    if(hasRealUpdates) {
+      emit('save-silent', {
+        settings: JSON.parse(JSON.stringify(localSettings.value)),
+        aiSettings: JSON.parse(JSON.stringify(localAiSettings.value)),
+        activeMode: localActiveMode.value
+      });
+      emit('clear-messages');
+    }
 
     let msg = 'Profile data synchronized successfully!';
     if (target === 'ai_training') msg = 'AI Training Guidelines synchronized!';
@@ -150,13 +171,6 @@ const handleRemoteSync = async (target = 'all') => {
   }
 };
 
-const handleSave = () => {
-  emit('save', {
-    settings: JSON.parse(JSON.stringify(localSettings.value)),
-    aiSettings: JSON.parse(JSON.stringify(localAiSettings.value)),
-    activeMode: localActiveMode.value
-  });
-};
 </script>
 
 <template>
