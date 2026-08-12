@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, nextTick, onMounted, computed } from 'vue';
+import { ref, watch, nextTick, onMounted, onUnmounted, computed } from 'vue';
 import MessageCard from './MessageCard.vue';
 
 const props = defineProps({
@@ -40,11 +40,13 @@ const props = defineProps({
 defineEmits(['send-local-test-prompt', 'delete-message']);
 
 const feedContainer = ref(null);
+const showScrollBottomBtn = ref(false);
 
 const scrollToBottom = () => {
   nextTick(() => {
     if (feedContainer.value) {
       feedContainer.value.scrollTop = feedContainer.value.scrollHeight;
+      showScrollBottomBtn.value = false;
     }
   });
 };
@@ -71,13 +73,43 @@ const scrollToResponse = (msgId) => {
   }
 };
 
-// Scroll to bottom on updates to message list, loading status, or live voice capture text
-watch(() => props.messages.length, scrollToBottom);
-watch(() => props.isLoading, scrollToBottom);
-watch(() => props.voiceInterimText, scrollToBottom);
+// Check if the user is scrolled up from the bottom of the feed container.
+// If they are scrolled up by more than 0px, show the "Scroll to Bottom" indicator button.
+const checkScrollPosition = () => {
+  if (feedContainer.value) {
+    const { scrollTop, clientHeight, scrollHeight } = feedContainer.value;
+    showScrollBottomBtn.value = (scrollHeight - scrollTop - clientHeight) > 0;
+  }
+};
+
+const handleScroll = () => {
+  checkScrollPosition();
+};
+
+// Check scroll position when messages update, load states transition, or live voice capture updates.
+// This ensures the floating arrow button reacts dynamically without forcing scrolls on the user.
+watch(() => props.messages.length, () => {
+  nextTick(checkScrollPosition);
+});
+watch(() => props.isLoading, () => {
+  nextTick(checkScrollPosition);
+});
+watch(() => props.voiceInterimText, () => {
+  nextTick(checkScrollPosition);
+});
 
 onMounted(() => {
+  if (feedContainer.value) {
+    feedContainer.value.addEventListener('scroll', handleScroll);
+  }
+  // Scroll to bottom on initial mount
   scrollToBottom();
+});
+
+onUnmounted(() => {
+  if (feedContainer.value) {
+    feedContainer.value.removeEventListener('scroll', handleScroll);
+  }
 });
 </script>
 
@@ -101,10 +133,10 @@ onMounted(() => {
             AI Provider: <strong>{{ aiSettings.provider }}</strong>
           </span>
         </p>
-        <button 
-          v-if="activeMode !== 'ai'" 
-          class="btn-primary" 
-          @click="$emit('send-local-test-prompt')" 
+        <button
+          v-if="activeMode !== 'ai'"
+          class="btn-primary"
+          @click="$emit('send-local-test-prompt')"
           style="padding: 6px 12px; font-size: 11px; margin-top: 12px;"
         >
           Send Local Test Prompt
@@ -144,6 +176,20 @@ onMounted(() => {
         <span class="preview-text">{{ voiceInterimText }}</span>
       </div>
     </main>
+
+    <!-- Scroll to Bottom Floating Button -->
+    <button
+      v-if="showScrollBottomBtn"
+      class="scroll-bottom-btn"
+      @click="scrollToBottom"
+      type="button"
+      title="Scroll to bottom"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <polyline points="19 12 12 19 5 12"></polyline>
+      </svg>
+    </button>
 
     <!-- Floating Response Navigation Panel -->
     <div v-if="navResponses.length > 0" class="response-navigator">
