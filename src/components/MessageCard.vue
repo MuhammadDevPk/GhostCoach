@@ -73,6 +73,7 @@ const emit = defineEmits(['delete']);
 
 <template>
   <div
+    :id="'msg-' + msg.id"
     class="message-card"
     :class="{
       'is-latest': isLatest && !msg.isUser,
