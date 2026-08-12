@@ -2,6 +2,16 @@
  * Service to communicate with various AI Providers (Groq, Gemini, OpenRouter, GitHub Models)
  */
 
+// Remember the last successful API key index for each provider so that subsequent calls
+// start from the active/working key instead of resetting to index 0. This implements
+// circular round-robin rotation, preventing Key 1 from getting hammered repeatedly.
+const providerKeyOffsets = {
+  gemini: 0,
+  groq: 0,
+  openrouter: 0,
+  github: 0
+};
+
 /**
  * Sends a message to the configured AI provider and returns the response.
  * @param {Object} params
@@ -44,61 +54,63 @@ ${baseInstructions}`;
     compiledInstructions += `\n\n--- YOUR BACKGROUND ---\n${resumeText}`;
   }
 
-  compiledInstructions += `
-Humanizer
-Removes the statistical and stylistic fingerprints that make writing read as AI-generated, based on documented patterns from AI-detection research (perplexity/burstiness analysis, stylometric studies, and crowd-sourced "AI tell" lists).
+//   compiledInstructions += `
+// Humanizer
+// Removes the statistical and stylistic fingerprints that make writing read as AI-generated, based on documented patterns from AI-detection research (perplexity/burstiness analysis, stylometric studies, and crowd-sourced "AI tell" lists).
 
-When to apply this
-Apply automatically, without being asked, whenever producing:
+// When to apply this
+// Apply automatically, without being asked, whenever producing:
 
-Emails, essays, articles, blog posts, reports, social posts, scripts, marketing copy
-Any prose response longer than ~2-3 sentences
-Apply on request when the user pastes text and asks to remove AI tells, "humanize" it, or make it sound less robotic.
-Skip for: code/comments, technical docs where precision beats style, legal/medical boilerplate, single-line factual answers.
+// Emails, essays, articles, blog posts, reports, social posts, scripts, marketing copy
+// Any prose response longer than ~2-3 sentences
+// Apply on request when the user pastes text and asks to remove AI tells, "humanize" it, or make it sound less robotic.
+// Skip for: code/comments, technical docs where precision beats style, legal/medical boilerplate, single-line factual answers.
 
-The checklist
-Before finalizing any piece of writing, run it against these five layers. Catching one instance of something below isn't a big deal — the tell is in clustering multiple instances together. The goal is deletion and rewriting, not just word-swapping (swapping "delve" for a synonym while keeping the same flat sentence shape doesn't fix anything).
+// The checklist
+// Before finalizing any piece of writing, run it against these five layers. Catching one instance of something below isn't a big deal — the tell is in clustering multiple instances together. The goal is deletion and rewriting, not just word-swapping (swapping "delve" for a synonym while keeping the same flat sentence shape doesn't fix anything).
 
-1. Banned/high-risk vocabulary
-Avoid these unless there's truly no other word that fits (proper nouns, direct quotes, and technical terms are exempt):
-Verbs: delve, leverage, utilize, harness, streamline, underscore, foster, navigate, elevate, showcase, unlock, unpack
-Adjectives: pivotal, robust, seamless, cutting-edge, multifaceted, comprehensive, unwavering, paramount, compelling, intricate, meticulous
-Nouns/metaphors: tapestry, landscape, realm, mosaic, ecosystem, symphony, labyrinth, beacon, cornerstone, bedrock, testament, kaleidoscope, journey (as metaphor)
-Transitions: furthermore, moreover, consequently, notably, additionally
-Stock phrases: "in today's ever-evolving world," "it's important to note that," "in summary / in conclusion," "certainly!," "at the end of the day," "when it comes to X"
-If a first draft naturally produces one of these, cut it and rewrite the sentence around a plainer, more specific word — don't just find a fancier synonym.
+// 1. Banned/high-risk vocabulary
+// Avoid these unless there's truly no other word that fits (proper nouns, direct quotes, and technical terms are exempt):
+// Verbs: delve, leverage, utilize, harness, streamline, underscore, foster, navigate, elevate, showcase, unlock, unpack
+// Adjectives: pivotal, robust, seamless, cutting-edge, multifaceted, comprehensive, unwavering, paramount, compelling, intricate, meticulous
+// Nouns/metaphors: tapestry, landscape, realm, mosaic, ecosystem, symphony, labyrinth, beacon, cornerstone, bedrock, testament, kaleidoscope, journey (as metaphor)
+// Transitions: furthermore, moreover, consequently, notably, additionally
+// Stock phrases: "in today's ever-evolving world," "it's important to note that," "in summary / in conclusion," "certainly!," "at the end of the day," "when it comes to X"
+// If a first draft naturally produces one of these, cut it and rewrite the sentence around a plainer, more specific word — don't just find a fancier synonym.
 
-2. Structural patterns to avoid
-Negative/contrastive parallelism — "It's not just X, it's Y." Use sparingly if at all; when a contrast is genuinely useful, state it plainly instead ("X isn't the real issue — Y is").
-Rule-of-three lists — triads like "efficient, effective, and reliable" or "simple, powerful, transformative." Vary list length; use two items or four, or just one strong specific detail instead of a list.
-Rhetorical mini-question transitions — "The catch?" "The kicker?" "Sound familiar?" Don't use these as section transitions.
-Rigid Intro → Point → Point → Point → Conclusion formula, especially with a summary paragraph that just restates the intro. Let structure follow the actual content instead of a template. It's fine to end on a point, a question, or an example rather than a wrap-up paragraph.
-False ranges — "from casual users to enterprise teams" implying a spectrum that isn't really being discussed. Only use range/spectrum framing when there's an actual range being described.
-3. Punctuation and grammar
-Limit em dashes to true emphasis breaks — don't default to them as a connector between clauses. Prefer periods, commas, or parentheses depending on what actually fits.
-Don't strive for mechanically flawless grammar — natural variation (a sentence fragment, a comma splice used for effect, contractions) reads as human. This doesn't mean introducing errors; it means not smoothing every sentence into identical, textbook-correct rhythm.
-4. Rhythm and burstiness
-Vary sentence length deliberately. Follow a long, complex sentence with something short. Don't let every sentence land in the same 15-25 word band.
-Avoid uniform paragraph lengths — let some paragraphs be one sentence.
-5. Tone and specificity
-Prefer concrete, specific details over generic claims. "The API times out after 30 seconds under load" beats "the system faces performance challenges."
-Don't hedge everything into blandness — take an actual position where the content calls for one, rather than presenting every side neutrally by default.
-Cut sentences that sound authoritative but add no new information (AI "fluff" — restating the premise in fancier words).
-Workflow for existing text ("de-AI-ify this")
-Read the pasted text once fully before editing.
-Flag every hit against the vocabulary list in section 1.
-Flag every structural pattern from section 2.
-Rewrite — don't just do word-substitution. Restructure sentences and vary rhythm per sections 3-4.
-Re-read the result out loud (mentally) — if it still sounds like a template with the banned words removed, revise the structure, not just the vocabulary.
-Optionally, briefly tell the user what categories of tell you removed (e.g., "cut 3 rule-of-three lists, removed 4 flagged words, broke up two overly uniform paragraphs") — keep this note short, don't belabor it.
-Note on limits
-This checklist reduces surface-level "AI tells" but can't guarantee text will pass or fail any specific detector — detection tools weight dozens of statistical signals (perplexity, burstiness, stylometric fingerprints) that aren't fully controllable at the word/sentence level. Treat this as a style guide for writing that reads as more natural and specific, not as a guaranteed detector-evasion tool.`;
+// 2. Structural patterns to avoid
+// Negative/contrastive parallelism — "It's not just X, it's Y." Use sparingly if at all; when a contrast is genuinely useful, state it plainly instead ("X isn't the real issue — Y is").
+// Rule-of-three lists — triads like "efficient, effective, and reliable" or "simple, powerful, transformative." Vary list length; use two items or four, or just one strong specific detail instead of a list.
+// Rhetorical mini-question transitions — "The catch?" "The kicker?" "Sound familiar?" Don't use these as section transitions.
+// Rigid Intro → Point → Point → Point → Conclusion formula, especially with a summary paragraph that just restates the intro. Let structure follow the actual content instead of a template. It's fine to end on a point, a question, or an example rather than a wrap-up paragraph.
+// False ranges — "from casual users to enterprise teams" implying a spectrum that isn't really being discussed. Only use range/spectrum framing when there's an actual range being described.
+// 3. Punctuation and grammar
+// Limit em dashes to true emphasis breaks — don't default to them as a connector between clauses. Prefer periods, commas, or parentheses depending on what actually fits.
+// Don't strive for mechanically flawless grammar — natural variation (a sentence fragment, a comma splice used for effect, contractions) reads as human. This doesn't mean introducing errors; it means not smoothing every sentence into identical, textbook-correct rhythm.
+// 4. Rhythm and burstiness
+// Vary sentence length deliberately. Follow a long, complex sentence with something short. Don't let every sentence land in the same 15-25 word band.
+// Avoid uniform paragraph lengths — let some paragraphs be one sentence.
+// 5. Tone and specificity
+// Prefer concrete, specific details over generic claims. "The API times out after 30 seconds under load" beats "the system faces performance challenges."
+// Don't hedge everything into blandness — take an actual position where the content calls for one, rather than presenting every side neutrally by default.
+// Cut sentences that sound authoritative but add no new information (AI "fluff" — restating the premise in fancier words).
+// Workflow for existing text ("de-AI-ify this")
+// Read the pasted text once fully before editing.
+// Flag every hit against the vocabulary list in section 1.
+// Flag every structural pattern from section 2.
+// Rewrite — don't just do word-substitution. Restructure sentences and vary rhythm per sections 3-4.
+// Re-read the result out loud (mentally) — if it still sounds like a template with the banned words removed, revise the structure, not just the vocabulary.
+// Optionally, briefly tell the user what categories of tell you removed (e.g., "cut 3 rule-of-three lists, removed 4 flagged words, broke up two overly uniform paragraphs") — keep this note short, don't belabor it.
+// Note on limits
+// This checklist reduces surface-level "AI tells" but can't guarantee text will pass or fail any specific detector — detection tools weight dozens of statistical signals (perplexity, burstiness, stylometric fingerprints) that aren't fully controllable at the word/sentence level. Treat this as a style guide for writing that reads as more natural and specific, not as a guaranteed detector-evasion tool.`;
 
 
   // --- FIX #1: Trim conversation history to prevent system prompt dilution ---
   // Only keep the last 6 exchange pairs (12 messages) so the system prompt
   // remains dominant in the context window. Without this, after 5-10 exchanges
   // the model's attention shifts away from the humanizer instructions.
+
+  // compiledInstructions += `gene`;
   const MAX_HISTORY_MESSAGES = 12; // 6 user + 6 assistant turns
   let trimmedHistory = history;
   if (history.length > MAX_HISTORY_MESSAGES) {
@@ -130,26 +142,41 @@ This checklist reduces surface-level "AI tells" but can't guarantee text will pa
     return /401|403|429|Unauthorized|Forbidden|Rate Limit|rate_limit/i.test(err.message || '');
   }
 
+  const startIndex = providerKeyOffsets[provider] || 0;
   let lastError = null;
-  for (let i = 0; i < keys.length; i++) {
-    const activeKey = keys[i];
+
+  for (let step = 0; step < keys.length; step++) {
+    // Round-robin selection: start from last successful index and wrap around
+    const keyIndex = (startIndex + step) % keys.length;
+    const activeKey = keys[keyIndex];
     let attempt = 0;
     const MAX_SAME_KEY_RETRIES = 1; // one retry on transient errors before rotating
 
     while (attempt <= MAX_SAME_KEY_RETRIES) {
       try {
+        let result;
         switch (provider) {
           case 'gemini':
-            return await callGeminiAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+            result = await callGeminiAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+            break;
           case 'groq':
-            return await callGroqAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+            result = await callGroqAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+            break;
           case 'openrouter':
-            return await callOpenRouterAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+            result = await callOpenRouterAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+            break;
           case 'github':
-            return await callGitHubAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+            result = await callGitHubAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+            break;
           default:
             throw new Error(`Unsupported AI Provider: ${provider}`);
         }
+
+        // Success! Set the offset to the next key index in the list for the next call.
+        // This ensures strict round-robin rotation (1 -> 2 -> 3 -> 4 -> 1).
+        providerKeyOffsets[provider] = (keyIndex + 1) % keys.length;
+        return result;
+
       } catch (err) {
         lastError = err;
 
@@ -159,19 +186,19 @@ This checklist reduces surface-level "AI tells" but can't guarantee text will pa
 
         if (isRotateError(err)) {
           // Auth / rate-limit error — rotating to next key will help
-          console.warn(`API key rotation: key ${i + 1}/${keys.length} for ${provider} has auth/rate-limit error, rotating:`, err.message);
+          console.warn(`API key rotation: key ${keyIndex + 1}/${keys.length} for ${provider} has auth/rate-limit error, rotating:`, err.message);
           break; // exit while loop, outer for loop moves to next key
         }
 
         if (attempt < MAX_SAME_KEY_RETRIES) {
           // Transient structural error — retry same key once
-          console.warn(`API key retry: key ${i + 1}/${keys.length} for ${provider} returned transient error (attempt ${attempt + 1}), retrying:`, err.message);
+          console.warn(`API key retry: key ${keyIndex + 1}/${keys.length} for ${provider} returned transient error (attempt ${attempt + 1}), retrying:`, err.message);
           attempt++;
           continue;
         }
 
         // Exhausted same-key retries — try next key as a last resort
-        console.warn(`API key rotation: key ${i + 1}/${keys.length} for ${provider} exhausted retries, rotating:`, err.message);
+        console.warn(`API key rotation: key ${keyIndex + 1}/${keys.length} for ${provider} exhausted retries, rotating:`, err.message);
         break;
       }
     }
