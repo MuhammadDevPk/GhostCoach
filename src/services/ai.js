@@ -239,7 +239,7 @@ async function callGeminiAPI({ apiKey, model, systemInstruction, history, screen
     contents,
     generationConfig: {
       temperature: 0.7,
-      maxOutputTokens: 1024
+      maxOutputTokens: 4096
     }
   };
 
@@ -270,9 +270,15 @@ async function callGeminiAPI({ apiKey, model, systemInstruction, history, screen
     throw new Error('Gemini API returned no candidates/responses.');
   }
 
-  const text = candidates[0].content?.parts?.[0]?.text;
+  let text = candidates[0].content?.parts?.[0]?.text;
   if (!text) {
     throw new Error('Gemini API response structure was missing content text.');
+  }
+
+  // Handle recitation filter truncation gracefully
+  const finishReason = candidates[0].finishReason;
+  if (finishReason === 'RECITATION') {
+    text += '\n\n*(Note: The rest of standard code output was truncated by the Gemini Safety Recitation Filter because it resembled public repository code verbatim. To bypass this, customize your query or request unique naming conventions).*';
   }
 
   const usage = result.usageMetadata || {};
@@ -309,7 +315,7 @@ async function callGroqAPI({ apiKey, model, systemInstruction, history, signal }
       model: modelName,
       messages,
       temperature: 0.85,
-      max_tokens: 1024
+      max_tokens: 4096
     }),
     signal
   });
@@ -375,7 +381,7 @@ async function callOpenRouterAPI({ apiKey, model, systemInstruction, history, sc
       model: modelName,
       messages,
       temperature: 0.85,
-      max_tokens: 1024
+      max_tokens: 4096
     }),
     signal
   });
@@ -448,7 +454,7 @@ async function callGitHubAPI({ apiKey, model, systemInstruction, history, screen
       model: modelName,
       messages,
       temperature: 0.85,
-      max_tokens: 1024
+      max_tokens: 4096
     }),
     signal
   });

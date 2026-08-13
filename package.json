@@ -36,8 +36,7 @@
     "productName": "windowserverhelper",
     "mac": {
       "target": [
-        "dir",
-        "zip"
+        "dir"
       ],
       "category": "public.app-category.utilities"
     },
