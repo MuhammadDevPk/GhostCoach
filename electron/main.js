@@ -169,6 +169,15 @@ app.whenReady().then(() => {
     }
   });
 
+  // Register toggle record, transcribe & autosend shortcut (Cmd+Shift+: / Ctrl+Shift+:)
+  const toggleAutosendCallback = () => {
+    if (mainWindow) {
+      mainWindow.webContents.send('toggle-record-autosend');
+    }
+  };
+  globalShortcut.register('CommandOrControl+Shift+:', toggleAutosendCallback);
+  globalShortcut.register('CommandOrControl+Shift+;', toggleAutosendCallback);
+
   // Register partial checkpoint record shortcut (Cmd+Shift+P / Ctrl+Shift+P)
   globalShortcut.register('CommandOrControl+Shift+P', () => {
     if (mainWindow) {

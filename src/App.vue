@@ -160,6 +160,13 @@ onMounted(() => {
     });
   }
 
+  // Listen for global shortcut record & autosend toggle from main process
+  if (window.electronAPI && typeof window.electronAPI.onToggleRecordAutosend === 'function') {
+    window.electronAPI.onToggleRecordAutosend(() => {
+      toggleMicAutoSend();
+    });
+  }
+
   // Listen for global shortcut partial checkpoint record from main process
   if (window.electronAPI && typeof window.electronAPI.onCheckpointRecord === 'function') {
     window.electronAPI.onCheckpointRecord(() => {
