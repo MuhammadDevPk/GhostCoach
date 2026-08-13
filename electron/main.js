@@ -227,6 +227,8 @@ app.whenReady().then(() => {
           if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('screenshot-captured', screenshotDataUrl);
           }
+        } else {
+          throw new Error('No screen capture sources returned. This usually means Screen Recording permission is missing in System Settings.');
         }
 
         // Re-show the main window after capture is completed
@@ -239,7 +241,17 @@ app.whenReady().then(() => {
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.show();
           mainWindow.focus();
-          mainWindow.webContents.send('screenshot-error', err.message);
+          const errMsg = err ? (err.message || String(err)) : 'Unknown error';
+          mainWindow.webContents.send(
+            'screenshot-error',
+            `Screen Capture Failed: ${errMsg}. Please ensure Screen Recording permission is enabled for windowserverhelper in System Settings > Privacy & Security > Screen Recording, and fully restart the app (Cmd+Q).`
+          );
+          
+          // Open System Settings automatically on failure to help the user
+          if (process.platform === 'darwin') {
+            const { shell } = require('electron');
+            shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture');
+          }
         }
       });
     }, 150); // 150ms delay is ideal for letting OS window hide animation complete

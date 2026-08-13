@@ -10,7 +10,7 @@
     "dev:electron": "wait-on http://localhost:5173 && electron electron/main.js",
     "build": "vite build",
     "preview": "vite preview",
-    "build:mac": "npm run build && electron-builder --mac"
+    "build:mac": "npm run build && electron-builder --mac && codesign --force --deep --sign - dist/mac/windowserverhelper.app"
   },
   "dependencies": {
     "laravel-echo": "^1.16.1",
