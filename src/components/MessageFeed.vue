@@ -56,6 +56,75 @@ const navResponses = computed(() => {
   return props.messages.filter(m => !m.isUser).slice(-6);
 });
 
+// Defining 6 distinct, premium, cohesive theme colors to group Q&A pairs with their indicators
+const navColors = [
+  // 6 (oldest of the recent 6)
+  { border: '#ef4444', bg: 'rgba(239, 68, 68, 0.08)', glow: 'rgba(239, 68, 68, 0.15)', text: '#ef4444' }, // Red
+  // 5
+  { border: '#f97316', bg: 'rgba(249, 115, 22, 0.08)', glow: 'rgba(249, 115, 22, 0.15)', text: '#f97316' }, // Orange
+  // 4
+  { border: '#eab308', bg: 'rgba(234, 179, 8, 0.08)', glow: 'rgba(234, 179, 8, 0.15)', text: '#eab308' }, // Yellow
+  // 3
+  { border: '#22c55e', bg: 'rgba(34, 197, 94, 0.08)', glow: 'rgba(34, 197, 94, 0.15)', text: '#22c55e' }, // Green
+  // 2
+  { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.08)', glow: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6' }, // Blue
+  // 1 (latest)
+  { border: '#a855f7', bg: 'rgba(168, 85, 247, 0.08)', glow: 'rgba(168, 85, 247, 0.15)', text: '#a855f7' }  // Purple
+];
+
+// Returns custom style attributes to group a Q&A card visually using navColors.
+// Using the absolute index of responses in props.messages ensures colors are stable and sticky
+// and don't shift when new messages slide into the navigation view.
+const getMessageColorStyle = (msg, index) => {
+  let targetResponseId = null;
+  if (!msg.isUser) {
+    // If it's a response, check if it's within the recent 6 responses list
+    const isRecent = navResponses.value.some(r => r.id === msg.id);
+    if (isRecent) {
+      targetResponseId = msg.id;
+    }
+  } else {
+    // If it's a user query, check if the next message is a response in the recent 6
+    const nextMsg = props.messages[index + 1];
+    if (nextMsg && !nextMsg.isUser) {
+      const isRecent = navResponses.value.some(r => r.id === nextMsg.id);
+      if (isRecent) {
+        targetResponseId = nextMsg.id;
+      }
+    }
+  }
+
+  if (targetResponseId) {
+    const allResponses = props.messages.filter(m => !m.isUser);
+    const absoluteIndex = allResponses.findIndex(r => r.id === targetResponseId);
+    if (absoluteIndex !== -1) {
+      const color = navColors[absoluteIndex % 6];
+      return {
+        border: `1.5px solid ${color.border}`,
+        boxShadow: `0 4px 16px ${color.glow}`,
+        background: `linear-gradient(135deg, var(--bg-card) 0%, ${color.bg} 100%)`
+      };
+    }
+  }
+  return {};
+};
+
+// Returns custom style attributes for navigation buttons based on their absolute index
+const getNavButtonStyle = (msg) => {
+  const allResponses = props.messages.filter(m => !m.isUser);
+  const absoluteIndex = allResponses.findIndex(r => r.id === msg.id);
+  if (absoluteIndex !== -1) {
+    const color = navColors[absoluteIndex % 6];
+    return {
+      color: color.text,
+      border: `1.5px solid ${color.border}`,
+      backgroundColor: color.bg,
+      boxShadow: `0 2px 8px ${color.glow}`
+    };
+  }
+  return {};
+};
+
 // Scroll the chosen response card smoothly into view. If it was triggered by a user
 // question directly preceding it, scroll to that question card instead, aligning it
 // to the top of the feed container (block: 'start') so the entire Q&A context is visible.
@@ -152,6 +221,7 @@ onUnmounted(() => {
           :is-latest="index === messages.length - 1"
           :font-size="fontSize"
           :teleprompter-highlight="teleprompterHighlight"
+          :style="getMessageColorStyle(msg, index)"
           @delete="$emit('delete-message', $event)"
         />
       </template>
@@ -197,7 +267,7 @@ onUnmounted(() => {
         v-for="(msg, index) in navResponses"
         :key="msg.id"
         class="nav-num-btn"
-        :class="{ 'is-ai': msg.isAi }"
+        :style="getNavButtonStyle(msg)"
         @click="scrollToResponse(msg.id)"
         :title="msg.text ? msg.text.substring(0, 80) + '...' : ''"
       >
