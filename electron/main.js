@@ -216,9 +216,9 @@ app.whenReady().then(() => {
         thumbnailSize: { width, height }
       }).then(sources => {
         // Find the primary screen source
-        const primarySource = sources.find(source => 
-          source.name === 'Entire Screen' || 
-          source.name === 'Screen 1' || 
+        const primarySource = sources.find(source =>
+          source.name === 'Entire Screen' ||
+          source.name === 'Screen 1' ||
           source.id.startsWith('screen:')
         ) || sources[0];
 
@@ -228,7 +228,7 @@ app.whenReady().then(() => {
             mainWindow.webContents.send('screenshot-captured', screenshotDataUrl);
           }
         }
-        
+
         // Re-show the main window after capture is completed
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.show();

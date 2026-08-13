@@ -26,7 +26,7 @@ describe('ai.js key rotation', () => {
     const result = await sendChatMessage({
       provider: 'groq',
       apiKey: ['invalid_key', 'valid_key'],
-      model: 'llama-3.3-70b-versatile',
+      model: 'openai/gpt-oss-120b',
       systemInstruction: 'Test instructions',
       history: [{ role: 'user', content: 'hello' }]
     });
@@ -50,7 +50,7 @@ describe('ai.js key rotation', () => {
       sendChatMessage({
         provider: 'groq',
         apiKey: ['bad_key_1', 'bad_key_2'],
-        model: 'llama-3.3-70b-versatile',
+        model: 'llaopenai/gpt-oss-120b',
         systemInstruction: 'Test instructions',
         history: [{ role: 'user', content: 'hello' }]
       })
@@ -71,7 +71,7 @@ describe('ai.js key rotation', () => {
       sendChatMessage({
         provider: 'groq',
         apiKey: ['key_1', 'key_2'],
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         systemInstruction: 'Test instructions',
         history: [{ role: 'user', content: 'hello' }],
         signal: controller.signal

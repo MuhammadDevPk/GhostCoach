@@ -290,7 +290,7 @@ async function callGeminiAPI({ apiKey, model, systemInstruction, history, screen
  * Call Groq API (OpenAI-compatible)
  */
 async function callGroqAPI({ apiKey, model, systemInstruction, history, signal }) {
-  const modelName = model || 'llama-3.3-70b-versatile';
+  const modelName = model || 'openai/gpt-oss-120b';
   const url = 'https://api.groq.com/openai/v1/chat/completions';
 
   const messages = [];

@@ -38,7 +38,7 @@ const DEFAULT_AI_SETTINGS = {
   enabled: true,
   provider: 'gemini',
   geminiModel: 'gemini-2.5-flash',
-  groqModel: 'llama-3.3-70b-versatile',
+  groqModel: 'openai/gpt-oss-120b',
   openrouterModel: 'google/gemini-2.5-flash',
   githubModel: 'gpt-4o-mini',
   geminiKey: [''],
