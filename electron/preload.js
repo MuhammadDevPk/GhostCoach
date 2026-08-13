@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onCheckpointRecord: (callback) => ipcRenderer.on('checkpoint-record', (_event, value) => callback(value)),
   onCombineResponses: (callback) => ipcRenderer.on('combine-responses', (_event, value) => callback(value)),
   onCancelRequest: (callback) => ipcRenderer.on('cancel-request', (_event, value) => callback(value)),
+  onScreenshotCaptured: (callback) => ipcRenderer.on('screenshot-captured', (_event, value) => callback(value)),
+  onScreenshotError: (callback) => ipcRenderer.on('screenshot-error', (_event, value) => callback(value)),
   showTeleprompter: (text) => ipcRenderer.send('teleprompter:show', text),
   closeTeleprompter: () => ipcRenderer.send('teleprompter:close'),
   onLoadTeleprompter: (callback) => ipcRenderer.on('teleprompter:load', (_event, value) => callback(value)),

@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps({
   msg: {
@@ -21,6 +21,13 @@ const props = defineProps({
     type: Object,
     default: null
   }
+});
+
+const isCollapsed = ref(true);
+
+// Identifies if this message is a screenshot prompt containing verbose OCR text
+const isScreenshotCard = computed(() => {
+  return props.msg.label === 'You (Screen)' && props.msg.text.length > 80;
 });
 
 // Decodes HTML entities safely
@@ -82,11 +89,33 @@ const emit = defineEmits(['delete']);
       'is-error': msg.isError
     }"
   >
+    <!-- Renders full text if not a long screenshot OCR card, or if it has been expanded -->
     <div
+      v-if="!isScreenshotCard || !isCollapsed"
       class="message-text"
       :style="{ fontSize: fontSize + 'px' }"
       v-html="highlightedText"
     ></div>
+
+    <!-- Renders a brief thumbnail notation for collapsed OCR text -->
+    <div
+      v-else
+      class="message-text screenshot-collapsed-placeholder"
+      :style="{ fontSize: fontSize + 'px', fontStyle: 'italic', opacity: 0.85 }"
+    >
+      [Captured Screen Snapshot] 📸
+    </div>
+
+    <!-- Interactive toggle for long OCR content card -->
+    <div v-if="isScreenshotCard" class="screenshot-toggle-container">
+      <button
+        class="btn-screenshot-toggle"
+        @click="isCollapsed = !isCollapsed"
+        type="button"
+      >
+        {{ isCollapsed ? 'See Context' : 'See Less' }}
+      </button>
+    </div>
 
     <div class="message-meta">
       <span

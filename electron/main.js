@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen, globalShortcut, systemPreferences } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, globalShortcut, systemPreferences, desktopCapturer } = require('electron');
 const path = require('path');
 
 // Force the OS process name to override the default Electron metadata string
@@ -198,6 +198,55 @@ app.whenReady().then(() => {
       mainWindow.webContents.send('cancel-request');
     }
   });
+
+  // Register screenshot capture shortcut (Cmd+Shift+" / Ctrl+Shift+")
+  const captureScreenshotCallback = () => {
+    if (!mainWindow) return;
+
+    // To prevent capturing the Ghost Coach overlay window itself,
+    // we hide it temporarily, wait a brief duration, capture, and show it again.
+    mainWindow.hide();
+
+    setTimeout(() => {
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width, height } = primaryDisplay.bounds;
+
+      desktopCapturer.getSources({
+        types: ['screen'],
+        thumbnailSize: { width, height }
+      }).then(sources => {
+        // Find the primary screen source
+        const primarySource = sources.find(source => 
+          source.name === 'Entire Screen' || 
+          source.name === 'Screen 1' || 
+          source.id.startsWith('screen:')
+        ) || sources[0];
+
+        if (primarySource) {
+          const screenshotDataUrl = primarySource.thumbnail.toDataURL();
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('screenshot-captured', screenshotDataUrl);
+          }
+        }
+        
+        // Re-show the main window after capture is completed
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.show();
+          mainWindow.focus();
+        }
+      }).catch(err => {
+        console.error('Failed to capture screenshot:', err);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.show();
+          mainWindow.focus();
+          mainWindow.webContents.send('screenshot-error', err.message);
+        }
+      });
+    }, 150); // 150ms delay is ideal for letting OS window hide animation complete
+  };
+
+  globalShortcut.register("CommandOrControl+Shift+'", captureScreenshotCallback);
+  globalShortcut.register('CommandOrControl+Shift+"', captureScreenshotCallback);
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) {

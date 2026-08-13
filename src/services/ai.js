@@ -23,7 +23,7 @@ const providerKeyOffsets = {
  * @param {AbortSignal} [params.signal] - Optional signal to abort the request
  * @returns {Promise<string>} The response text from the AI
  */
-export async function sendChatMessage({ provider, apiKey, model, systemInstruction, history, persona, resumeText, skipHumanizerReminder, signal }) {
+export async function sendChatMessage({ provider, apiKey, model, systemInstruction, history, persona, resumeText, skipHumanizerReminder, screenshotBase64, signal }) {
   // Normalize apiKey parameter to a list of non-empty strings
   const keys = (Array.isArray(apiKey) ? apiKey : [apiKey])
     .map(k => typeof k === 'string' ? k.trim() : '')
@@ -157,16 +157,16 @@ ${baseInstructions}`;
         let result;
         switch (provider) {
           case 'gemini':
-            result = await callGeminiAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+            result = await callGeminiAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, screenshotBase64, signal });
             break;
           case 'groq':
             result = await callGroqAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
             break;
           case 'openrouter':
-            result = await callOpenRouterAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+            result = await callOpenRouterAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, screenshotBase64, signal });
             break;
           case 'github':
-            result = await callGitHubAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, signal });
+            result = await callGitHubAPI({ apiKey: activeKey, model, systemInstruction: compiledInstructions, history: augmentedHistory, screenshotBase64, signal });
             break;
           default:
             throw new Error(`Unsupported AI Provider: ${provider}`);
@@ -210,15 +210,28 @@ ${baseInstructions}`;
 /**
  * Call Gemini API (using Google's GenerateContent v1beta endpoint)
  */
-async function callGeminiAPI({ apiKey, model, systemInstruction, history, signal }) {
+async function callGeminiAPI({ apiKey, model, systemInstruction, history, screenshotBase64, signal }) {
   const modelName = model || 'gemini-2.5-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
   // Map history to Gemini format (role must be 'user' or 'model')
-  const contents = history.map(msg => {
+  const contents = history.map((msg, index) => {
+    const parts = [{ text: msg.content }];
+
+    // Inject base64 screenshot into the final user prompt if present
+    if (screenshotBase64 && msg.role === 'user' && index === history.length - 1) {
+      const pureBase64 = screenshotBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+      parts.push({
+        inlineData: {
+          mimeType: 'image/png',
+          data: pureBase64
+        }
+      });
+    }
+
     return {
       role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
+      parts
     };
   });
 
@@ -327,7 +340,7 @@ async function callGroqAPI({ apiKey, model, systemInstruction, history, signal }
 /**
  * Call OpenRouter API (OpenAI-compatible)
  */
-async function callOpenRouterAPI({ apiKey, model, systemInstruction, history, signal }) {
+async function callOpenRouterAPI({ apiKey, model, systemInstruction, history, screenshotBase64, signal }) {
   const modelName = model || 'google/gemini-2.5-flash';
   const url = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -335,7 +348,20 @@ async function callOpenRouterAPI({ apiKey, model, systemInstruction, history, si
   if (systemInstruction) {
     messages.push({ role: 'system', content: systemInstruction });
   }
-  messages.push(...history);
+
+  history.forEach((msg, index) => {
+    if (screenshotBase64 && msg.role === 'user' && index === history.length - 1) {
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'text', text: msg.content },
+          { type: 'image_url', image_url: { url: screenshotBase64 } }
+        ]
+      });
+    } else {
+      messages.push({ role: msg.role, content: msg.content });
+    }
+  });
 
   const response = await fetch(url, {
     method: 'POST',
@@ -389,7 +415,7 @@ async function callOpenRouterAPI({ apiKey, model, systemInstruction, history, si
 /**
  * Call GitHub Models API (Azure/OpenAI compatible endpoint)
  */
-async function callGitHubAPI({ apiKey, model, systemInstruction, history, signal }) {
+async function callGitHubAPI({ apiKey, model, systemInstruction, history, screenshotBase64, signal }) {
   const modelName = model || 'gpt-4o-mini';
   const url = 'https://models.inference.ai.azure.com/chat/completions';
 
@@ -397,7 +423,20 @@ async function callGitHubAPI({ apiKey, model, systemInstruction, history, signal
   if (systemInstruction) {
     messages.push({ role: 'system', content: systemInstruction });
   }
-  messages.push(...history);
+
+  history.forEach((msg, index) => {
+    if (screenshotBase64 && msg.role === 'user' && index === history.length - 1) {
+      messages.push({
+        role: 'user',
+        content: [
+          { type: 'text', text: msg.content },
+          { type: 'image_url', image_url: { url: screenshotBase64 } }
+        ]
+      });
+    } else {
+      messages.push({ role: msg.role, content: msg.content });
+    }
+  });
 
   const response = await fetch(url, {
     method: 'POST',

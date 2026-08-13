@@ -4,6 +4,7 @@ import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 import { sendChatMessage } from './services/ai';
 import { SpeechToText } from './services/voice';
+import { extractTextFromImage } from './services/ocr';
 
 // Component Imports
 import AppHeader from './components/AppHeader.vue';
@@ -185,6 +186,21 @@ onMounted(() => {
   if (window.electronAPI && typeof window.electronAPI.onCancelRequest === 'function') {
     window.electronAPI.onCancelRequest(() => {
       cancelCurrentAction();
+    });
+  }
+
+  // Listen for desktop screenshots captured from main process
+  if (window.electronAPI && typeof window.electronAPI.onScreenshotCaptured === 'function') {
+    window.electronAPI.onScreenshotCaptured((screenshotDataUrl) => {
+      handleScreenshotCaptured(screenshotDataUrl);
+    });
+  }
+
+  // Listen for desktop screenshot failures from main process
+  if (window.electronAPI && typeof window.electronAPI.onScreenshotError === 'function') {
+    window.electronAPI.onScreenshotError((errMessage) => {
+      console.error('Screenshot Capture Failed:', errMessage);
+      handleIncomingMessage(`Screenshot Error: ${errMessage}`, true);
     });
   }
 
@@ -939,6 +955,188 @@ async function sendQuestion() {
   } finally {
     isLoading.value = false;
     activeAbortController = null;
+  }
+}
+
+// Send screenshot query to AI provider
+// Helper to check if an API key setting is configured (handling both single strings and arrays of strings)
+const hasKey = (keyVal) => {
+  if (!keyVal) return false;
+  const arr = Array.isArray(keyVal) ? keyVal : [keyVal];
+  return arr.some(k => typeof k === 'string' && k.trim() !== '');
+};
+
+// Send screenshot query to AI provider
+async function sendScreenshotQuestion(query, screenshotBase64) {
+  const isGeminiAvailable = hasKey(aiSettings.value.geminiKey);
+  const isGroqAvailable = hasKey(aiSettings.value.groqKey);
+
+  let provider = aiSettings.value.provider;
+  let apiKey = '';
+  let modelName = '';
+
+  // Priority screenshot routing: Gemini (natively multimodal) > Groq (OCR fallback) > Current Provider
+  if (isGeminiAvailable) {
+    provider = 'gemini';
+    apiKey = aiSettings.value.geminiKey;
+    modelName = aiSettings.value.geminiModel;
+  } else if (isGroqAvailable) {
+    provider = 'groq';
+    apiKey = aiSettings.value.groqKey;
+    modelName = aiSettings.value.groqModel;
+  } else {
+    if (provider === 'gemini') {
+      apiKey = aiSettings.value.geminiKey;
+      modelName = aiSettings.value.geminiModel;
+    } else if (provider === 'groq') {
+      apiKey = aiSettings.value.groqKey;
+      modelName = aiSettings.value.groqModel;
+    } else if (provider === 'openrouter') {
+      apiKey = aiSettings.value.openrouterKey;
+      modelName = aiSettings.value.openrouterModel;
+    } else if (provider === 'github') {
+      apiKey = aiSettings.value.githubKey;
+      modelName = aiSettings.value.githubModel;
+    }
+  }
+
+  if (!apiKey) {
+    handleIncomingMessage(`Error: API Key is missing for AI provider "${provider}". Please configure it in Settings.`, true);
+    return;
+  }
+
+  const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  // Add User bubble to UI showing screenshot thumbnail indicator
+  messages.value.push({
+    id: 'user-' + Date.now() + Math.random().toString(36).substr(2, 9),
+    text: screenshotBase64 ? '[Captured Screen Snapshot] 📸' : query,
+    time: timestamp,
+    label: 'You (Screen)',
+    isUser: true
+  });
+
+  // Append user prompt turn to context history
+  chatHistory.value.push({
+    role: 'user',
+    content: screenshotBase64
+      ? 'Identify and answer the core question, prompt, or slide topic shown in this attached screen capture.'
+      : query
+  });
+
+  isLoading.value = true;
+  activeAbortController = new AbortController();
+
+  try {
+    const aiResult = await sendChatMessage({
+      provider,
+      apiKey,
+      model: modelName,
+      systemInstruction: aiSettings.value.systemInstruction,
+      history: chatHistory.value,
+      persona: aiSettings.value.persona,
+      resumeText: aiSettings.value.resumeText,
+      screenshotBase64, // Pass base64 image data URL for vision parsing
+      signal: activeAbortController.signal
+    });
+
+    const responseText = aiResult.text;
+    const usage = aiResult.usage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+    totalSessionTokens.value += usage.totalTokens;
+
+    // Update prompt token count metadata in display
+    const userMsg = [...messages.value].reverse().find(m => m.isUser);
+    if (userMsg) {
+      userMsg.time = `${usage.promptTokens}`;
+    }
+
+    // Add AI response to UI
+    messages.value.push({
+      id: 'ai-' + Date.now() + Math.random().toString(36).substr(2, 9),
+      text: responseText,
+      time: `${usage.completionTokens}/${totalSessionTokens.value}`,
+      label: 'AI Guide (Screen)',
+      isAi: true
+    });
+
+    chatHistory.value.push({ role: 'assistant', content: responseText });
+
+    if (settings.value.teleprompterEnabled) {
+      runTeleprompter(responseText);
+    }
+
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      messages.value.push({
+        id: 'cancel-' + Date.now() + Math.random().toString(36).substr(2, 9),
+        text: 'AI request cancelled.',
+        time: 'cancelled',
+        label: 'System',
+        isError: true
+      });
+      chatHistory.value.pop();
+    } else {
+      console.error('Screen AI Request Failed:', error);
+      const errTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      messages.value.push({
+        id: 'err-' + Date.now() + Math.random().toString(36).substr(2, 9),
+        text: `Error calling Screen AI: ${error.message || error}`,
+        time: errTimestamp,
+        label: 'AI Error',
+        isError: true
+      });
+      chatHistory.value.pop();
+    }
+  } finally {
+    isLoading.value = false;
+    activeAbortController = null;
+  }
+}
+
+// Coordinate the screen text analysis process
+async function handleScreenshotCaptured(screenshotDataUrl) {
+  isLoading.value = true;
+  voiceInterimText.value = 'Analyzing captured screen contents...';
+
+  try {
+    const isGeminiAvailable = hasKey(aiSettings.value.geminiKey);
+    const isGroqAvailable = hasKey(aiSettings.value.groqKey);
+
+    let chosenProvider = aiSettings.value.provider;
+    if (isGeminiAvailable) {
+      chosenProvider = 'gemini';
+    } else if (isGroqAvailable) {
+      chosenProvider = 'groq';
+    }
+
+    // Direct multimodal vision support is available for Gemini, OpenRouter, and GitHub Models
+    const supportsVision = ['gemini', 'openrouter', 'github'].includes(chosenProvider);
+
+    if (supportsVision) {
+      await sendScreenshotQuestion('', screenshotDataUrl);
+    } else {
+      // Fallback local OCR extraction for purely text-only models
+      voiceInterimText.value = 'Running local OCR character extraction...';
+      const extractedText = await extractTextFromImage(screenshotDataUrl);
+
+      if (!extractedText || !extractedText.trim()) {
+        throw new Error('Local OCR found no readable text in the screenshot. Please make sure the target window is active directly behind the overlay.');
+      }
+
+      voiceInterimText.value = 'Refining text prompt...';
+      const prompt = `Refine and answer the core question or prompt from this extracted screen text:
+
+${extractedText}`;
+
+      await sendScreenshotQuestion(prompt, null);
+    }
+  } catch (err) {
+    console.error('Failed to process screen capture query:', err);
+    handleIncomingMessage(`Screen Capture Error: ${err.message}`, true);
+  } finally {
+    isLoading.value = false;
+    voiceInterimText.value = '';
   }
 }
 
