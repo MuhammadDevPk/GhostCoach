@@ -334,3 +334,81 @@ ipcMain.on('teleprompter:progress', (_event, progress) => {
   }
 });
 
+// Full-screen crop selection session states
+let cropSavedBounds = null;
+let cropTeleprompterWasVisible = false;
+
+ipcMain.on('crop:start', () => {
+  if (!mainWindow) return;
+
+  cropSavedBounds = mainWindow.getBounds();
+  cropTeleprompterWasVisible = !!(teleprompterWindow && teleprompterWindow.isVisible());
+
+  // Hide windows temporarily before capturing background screen image
+  mainWindow.hide();
+  if (teleprompterWindow) {
+    teleprompterWindow.hide();
+  }
+
+  // Brief delay to let window hide animations complete in OS window server
+  setTimeout(() => {
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width, height } = primaryDisplay.bounds;
+
+    desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: { width, height }
+    }).then(sources => {
+      const primarySource = sources.find(source =>
+        source.name === 'Entire Screen' ||
+        source.name === 'Screen 1' ||
+        source.id.startsWith('screen:')
+      ) || sources[0];
+
+      if (primarySource) {
+        const screenshotDataUrl = primarySource.thumbnail.toDataURL();
+        
+        // Expand window bounds to cover the entire primary screen
+        mainWindow.setBounds(primaryDisplay.bounds);
+        
+        // Initialize cropping overlay in frontend view
+        mainWindow.webContents.send('crop:init', screenshotDataUrl);
+        mainWindow.show();
+        mainWindow.focus();
+      } else {
+        throw new Error('No desktop screen capture sources returned.');
+      }
+    }).catch(err => {
+      console.error('Failed to capture crop screen source:', err);
+      const errMsg = err ? (err.message || String(err)) : 'Unknown error';
+      mainWindow.webContents.send('crop:error', errMsg);
+      
+      // Restore window back to normal floating bounds
+      if (cropSavedBounds) {
+        mainWindow.setBounds(cropSavedBounds);
+      }
+      mainWindow.show();
+      mainWindow.focus();
+      if (cropTeleprompterWasVisible && teleprompterWindow) {
+        teleprompterWindow.show();
+      }
+    });
+  }, 150);
+});
+
+ipcMain.on('crop:stop', () => {
+  if (!mainWindow) return;
+
+  // Restore main window back to floating size
+  if (cropSavedBounds) {
+    mainWindow.setBounds(cropSavedBounds);
+  }
+  mainWindow.show();
+  mainWindow.focus();
+
+  // Restore teleprompter visibility if it was shown previously
+  if (cropTeleprompterWasVisible && teleprompterWindow) {
+    teleprompterWindow.show();
+  }
+});
+

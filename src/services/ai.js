@@ -315,7 +315,7 @@ async function callGroqAPI({ apiKey, model, systemInstruction, history, signal }
       model: modelName,
       messages,
       temperature: 0.85,
-      max_tokens: 4096
+      max_tokens: 2048
     }),
     signal
   });
@@ -381,7 +381,7 @@ async function callOpenRouterAPI({ apiKey, model, systemInstruction, history, sc
       model: modelName,
       messages,
       temperature: 0.85,
-      max_tokens: 4096
+      max_tokens: 2048
     }),
     signal
   });
@@ -454,7 +454,7 @@ async function callGitHubAPI({ apiKey, model, systemInstruction, history, screen
       model: modelName,
       messages,
       temperature: 0.85,
-      max_tokens: 4096
+      max_tokens: 2048
     }),
     signal
   });

@@ -10,6 +10,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onCancelRequest: (callback) => ipcRenderer.on('cancel-request', (_event, value) => callback(value)),
   onScreenshotCaptured: (callback) => ipcRenderer.on('screenshot-captured', (_event, value) => callback(value)),
   onScreenshotError: (callback) => ipcRenderer.on('screenshot-error', (_event, value) => callback(value)),
+  // Screen cropping APIs
+  startCrop: () => ipcRenderer.send('crop:start'),
+  stopCrop: () => ipcRenderer.send('crop:stop'),
+  onCropInit: (callback) => ipcRenderer.on('crop:init', (_event, value) => callback(value)),
+  onCropError: (callback) => ipcRenderer.on('crop:error', (_event, value) => callback(value)),
+  
   showTeleprompter: (text) => ipcRenderer.send('teleprompter:show', text),
   closeTeleprompter: () => ipcRenderer.send('teleprompter:close'),
   onLoadTeleprompter: (callback) => ipcRenderer.on('teleprompter:load', (_event, value) => callback(value)),

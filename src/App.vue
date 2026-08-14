@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, nextTick, onBeforeUnmount } from 'vue';
+import { ref, reactive, computed, watch, onMounted, nextTick, onBeforeUnmount } from 'vue';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 import { sendChatMessage } from './services/ai';
@@ -62,6 +62,23 @@ const messages = ref([]);
 const chatHistory = ref([]);
 const newQuestion = ref('');
 const isLoading = ref(false);
+
+// Cropping Overlay States
+const isCropping = ref(false);
+const cropScreenshotUrl = ref('');
+const isDraggingCrop = ref(false);
+const cropStartCoord = reactive({ x: 0, y: 0 });
+const cropBox = reactive({ x: 0, y: 0, w: 0, h: 0 });
+const cropBgImg = ref(null);
+
+const cropBoxStyle = computed(() => {
+  return {
+    left: cropBox.x + 'px',
+    top: cropBox.y + 'px',
+    width: cropBox.w + 'px',
+    height: cropBox.h + 'px'
+  };
+});
 const totalSessionTokens = ref(0);
 const showTeleprompter = ref(false);
 const teleprompterText = ref('');
@@ -201,6 +218,29 @@ onMounted(() => {
     window.electronAPI.onScreenshotError((errMessage) => {
       console.error('Screenshot Capture Failed:', errMessage);
       handleIncomingMessage(`Screenshot Error: ${errMessage}`, true);
+    });
+  }
+
+  // Listen for screen cropping initialization events from main process
+  if (window.electronAPI && typeof window.electronAPI.onCropInit === 'function') {
+    window.electronAPI.onCropInit((screenshotDataUrl) => {
+      cropScreenshotUrl.value = screenshotDataUrl;
+      // Reset cropping coordinates
+      cropBox.x = 0;
+      cropBox.y = 0;
+      cropBox.w = 0;
+      cropBox.h = 0;
+      isDraggingCrop.value = false;
+      isCropping.value = true;
+    });
+  }
+
+  // Listen for cropping initialization capture errors
+  if (window.electronAPI && typeof window.electronAPI.onCropError === 'function') {
+    window.electronAPI.onCropError((errMessage) => {
+      console.error('Crop Background Capture Failed:', errMessage);
+      handleIncomingMessage(`Crop Error: ${errMessage}`, true);
+      isCropping.value = false;
     });
   }
 
@@ -1080,6 +1120,99 @@ async function sendScreenshotQuestion(query, screenshotBase64) {
   }
 }
 
+// Screenshot Area Cropping Functions
+function triggerCropSelection() {
+  if (window.electronAPI && window.electronAPI.startCrop) {
+    window.electronAPI.startCrop();
+  }
+}
+
+function cancelCropping() {
+  isCropping.value = false;
+  isDraggingCrop.value = false;
+  if (window.electronAPI && window.electronAPI.stopCrop) {
+    window.electronAPI.stopCrop();
+  }
+}
+
+const handleCropKeyDown = (e) => {
+  if (e.key === 'Escape' && isCropping.value) {
+    cancelCropping();
+  }
+};
+
+watch(isCropping, (newValue) => {
+  if (newValue) {
+    window.addEventListener('keydown', handleCropKeyDown);
+  } else {
+    window.removeEventListener('keydown', handleCropKeyDown);
+  }
+});
+
+function onCropMouseDown(e) {
+  if (e.button !== 0) return; // Left click only
+  isDraggingCrop.value = true;
+  cropStartCoord.x = e.clientX;
+  cropStartCoord.y = e.clientY;
+  cropBox.x = e.clientX;
+  cropBox.y = e.clientY;
+  cropBox.w = 0;
+  cropBox.h = 0;
+}
+
+function onCropMouseMove(e) {
+  if (!isDraggingCrop.value) return;
+  const currentX = e.clientX;
+  const currentY = e.clientY;
+  cropBox.x = Math.min(cropStartCoord.x, currentX);
+  cropBox.y = Math.min(cropStartCoord.y, currentY);
+  cropBox.w = Math.abs(currentX - cropStartCoord.x);
+  cropBox.h = Math.abs(currentY - cropStartCoord.y);
+}
+
+function onCropMouseUp() {
+  if (!isDraggingCrop.value) return;
+  isDraggingCrop.value = false;
+
+  if (cropBox.w > 5 && cropBox.h > 5) {
+    const img = cropBgImg.value;
+    if (!img) return;
+
+    const canvas = document.createElement('canvas');
+    // Account for Retina displays (physical resolution vs logical CSS window coordinates)
+    const scaleX = img.naturalWidth / window.innerWidth;
+    const scaleY = img.naturalHeight / window.innerHeight;
+
+    canvas.width = cropBox.w * scaleX;
+    canvas.height = cropBox.h * scaleY;
+
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(
+        img,
+        cropBox.x * scaleX,
+        cropBox.y * scaleY,
+        cropBox.w * scaleX,
+        cropBox.h * scaleY,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+      const croppedDataUrl = canvas.toDataURL('image/png');
+
+      // Stop crop mode and restore normal window
+      isCropping.value = false;
+      if (window.electronAPI && window.electronAPI.stopCrop) {
+        window.electronAPI.stopCrop();
+      }
+
+      // Handle the cropped image with AI routing
+      handleScreenshotCaptured(croppedDataUrl);
+    }
+  }
+}
+
 // Coordinate the screen text analysis process
 async function handleScreenshotCaptured(screenshotDataUrl) {
   isLoading.value = true;
@@ -1103,7 +1236,14 @@ async function handleScreenshotCaptured(screenshotDataUrl) {
       }
 
       voiceInterimText.value = 'Refining text prompt...';
-      const prompt = `Refine and answer the core question or prompt from this extracted screen text. Write any code solutions using unique variable and function names, custom structured logic, and explaining comments to avoid verbatim code replication filters (recitation checks):
+      // const prompt = `Refine and answer the core question or prompt from this extracted screen text. Write any code solutions using unique variable and function names, custom structured logic, and explaining comments to avoid verbatim code replication filters (recitation checks):
+      const prompt = ` First, determine whether the input is an interview question, a coding problem, or explanatory text, and answer accordingly.
+
+For interview questions, respond as a developer with 14+ or 16+ years or whatever years of experience is written in resume. Use a natural, conversational, first-person tone.
+
+Focus on how an experienced engineer would think: explain the reasoning behind technical decisions, discuss trade-offs, and mention architecture or technologies only when they are relevant to the question.
+
+Avoid textbook definitions, documentation-style explanations, unrealistic numbers, excessive buzzwords, technology dumping, and invented project details. Sound like an experienced developer sharing practical experience rather than an AI generating the most technically impressive answer. When multiple solutions are possible, choose the approach that a typical senior developer would be most likely to describe during a live interview:
 
 ${extractedText}`;
 
@@ -1144,6 +1284,23 @@ function closeApp() {
       @progress="teleprompterHighlight = $event"
     />
   </div>
+  <div v-else-if="isCropping" class="crop-overlay-wrapper" @mousedown="onCropMouseDown" @mousemove="onCropMouseMove" @mouseup="onCropMouseUp">
+    <!-- Background Screen Image -->
+    <img ref="cropBgImg" :src="cropScreenshotUrl" class="crop-bg" />
+
+    <!-- Semitransparent Mask Tinter -->
+    <div class="crop-mask"></div>
+
+    <!-- Transparent Box Highlight selection area -->
+    <div v-if="isDraggingCrop" class="crop-box" :style="cropBoxStyle">
+      <span class="crop-dimensions">{{ Math.round(cropBox.w) }} × {{ Math.round(cropBox.h) }}</span>
+    </div>
+
+    <!-- Header/Instructions overlay -->
+    <div class="crop-instructions">
+      Drag to select crop area • Press <kbd>ESC</kbd> to cancel
+    </div>
+  </div>
   <div v-else class="app-container">
     <div class="app-bg-overlay" :style="{ backgroundColor: settings.appBgColor || '#0e0e12', opacity: settings.appBgOpacity !== undefined ? settings.appBgOpacity : 1.0 }"></div>
     <AppHeader
@@ -1161,6 +1318,7 @@ function closeApp() {
       @toggle-ws="toggleWs"
       @minimize="minimizeApp"
       @close="closeApp"
+      @trigger-crop="triggerCropSelection"
     />
 
     <MessageFeed

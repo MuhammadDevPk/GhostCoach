@@ -35,7 +35,8 @@ defineEmits([
   'toggle-teleprompter',
   'toggle-ws',
   'minimize',
-  'close'
+  'close',
+  'trigger-crop'
 ]);
 </script>
 
@@ -112,6 +113,19 @@ defineEmits([
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M2 12h20M5 5h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"></path>
+        </svg>
+      </button>
+
+      <!-- Crop Area Screenshot Button -->
+      <button
+        class="btn-icon"
+        title="Crop Screen Area (Draw Box)"
+        @click="$emit('trigger-crop')"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <polyline points="21 15 16 10 5 21"></polyline>
         </svg>
       </button>
 

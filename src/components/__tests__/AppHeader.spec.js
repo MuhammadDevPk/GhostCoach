@@ -102,11 +102,23 @@ describe('AppHeader.vue', () => {
       props: defaultProps
     });
 
-    // Config toggle is now the 5th button (teleprompter button added at index 3)
-    const configToggleBtn = wrapper.findAll('.btn-icon')[4];
+    // Config toggle is now the 6th button (crop button added, shifting it to index 5)
+    const configToggleBtn = wrapper.findAll('.btn-icon')[5];
     await configToggleBtn.trigger('click');
 
     expect(wrapper.emitted('toggle-settings')).toBeTruthy();
+  });
+
+  it('emits trigger-crop on crop icon click', async () => {
+    const wrapper = mount(AppHeader, {
+      props: defaultProps
+    });
+
+    // Crop toggle is the 5th button (index 4)
+    const cropToggleBtn = wrapper.findAll('.btn-icon')[4];
+    await cropToggleBtn.trigger('click');
+
+    expect(wrapper.emitted('trigger-crop')).toBeTruthy();
   });
 
   it('emits minimize on click', async () => {
@@ -114,8 +126,8 @@ describe('AppHeader.vue', () => {
       props: defaultProps
     });
 
-    // Minimize is now the 6th button (teleprompter button added at index 3)
-    const minBtn = wrapper.findAll('.btn-icon')[5];
+    // Minimize is now the 7th button (crop button added, shifting it to index 6)
+    const minBtn = wrapper.findAll('.btn-icon')[6];
     await minBtn.trigger('click');
 
     expect(wrapper.emitted('minimize')).toBeTruthy();

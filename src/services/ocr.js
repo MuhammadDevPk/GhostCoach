@@ -18,7 +18,13 @@ export async function extractTextFromImage(imageSource) {
   try {
     // Perform text recognition on the source image
     const response = await worker.recognize(imageSource);
-    return response.data.text || '';
+    const rawText = response.data.text || '';
+    
+    // Clean up excessive whitespaces, tabs, and consecutive newlines to optimize token footprint
+    return rawText
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
   } catch (error) {
     console.error('Tesseract OCR recognition error:', error);
     throw new Error(`OCR Processing Failed: ${error.message}`);
