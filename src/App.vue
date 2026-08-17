@@ -5,12 +5,14 @@ import Pusher from 'pusher-js';
 import { sendChatMessage } from './services/ai';
 import { SpeechToText } from './services/voice';
 import { extractTextFromImage } from './services/ocr';
+import { DEFAULT_QUESTIONS } from './data/defaultQuestions';
 
 // Component Imports
 import AppHeader from './components/AppHeader.vue';
 import MessageFeed from './components/MessageFeed.vue';
 import ChatInput from './components/ChatInput.vue';
 import SettingsOverlay from './components/SettingsOverlay.vue';
+import QuestionsOverlay from './components/QuestionsOverlay.vue';
 import Teleprompter from './components/Teleprompter.vue';
 
 // Expose Pusher to window as required by Laravel Echo
@@ -57,7 +59,10 @@ const aiSettings = ref({ ...DEFAULT_AI_SETTINGS });
 const activeMode = ref('both'); // 'ws' | 'ai' | 'both'
 
 const showSettings = ref(false);
+const showQuestions = ref(false);
 const showChatInput = ref(true);
+
+const questions = ref([...DEFAULT_QUESTIONS]);
 const messages = ref([]);
 const chatHistory = ref([]);
 const newQuestion = ref('');
@@ -154,6 +159,26 @@ onMounted(() => {
   const savedFontSize = localStorage.getItem('prompt_font_size');
   if (savedFontSize) {
     fontSize.value = parseInt(savedFontSize) || 15;
+  }
+
+  const savedQuestions = localStorage.getItem('interview_questions');
+  if (savedQuestions) {
+    try {
+      const parsed = JSON.parse(savedQuestions);
+      // Auto-migrate if the user has the old static default questions list
+      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.title === 'Tell me about yourself.') {
+        questions.value = [...DEFAULT_QUESTIONS];
+        localStorage.setItem('interview_questions', JSON.stringify(DEFAULT_QUESTIONS));
+      } else {
+        questions.value = parsed;
+      }
+    } catch (e) {
+      console.error('Failed to parse saved questions', e);
+      questions.value = [...DEFAULT_QUESTIONS];
+    }
+  } else {
+    // Populate default questions in localStorage for clean bootstrapping
+    localStorage.setItem('interview_questions', JSON.stringify(DEFAULT_QUESTIONS));
   }
 
   // Setup Speech-to-Text Instance for manual toggle-to-record transcription
@@ -1258,6 +1283,19 @@ ${extractedText}`;
   }
 }
 
+// Questions Database Overlay Handlers
+function toggleQuestionsOverlay() {
+  showQuestions.value = !showQuestions.value;
+  if (showQuestions.value) {
+    showSettings.value = false; // Mutually exclusive
+  }
+}
+
+function handleUpdateQuestions(newQuestions) {
+  questions.value = newQuestions;
+  localStorage.setItem('interview_questions', JSON.stringify(newQuestions));
+}
+
 // Electron System Window Calls
 function minimizeApp() {
   if (window.electronAPI && window.electronAPI.minimizeWindow) {
@@ -1308,12 +1346,14 @@ function closeApp() {
       :font-size="fontSize"
       :show-chat-input="showChatInput"
       :show-settings="showSettings"
+      :show-questions="showQuestions"
       :teleprompter-enabled="settings.teleprompterEnabled ?? true"
       :ws-enabled="settings.wsEnabled ?? true"
       @decrease-font="decreaseFont"
       @increase-font="increaseFont"
       @toggle-chat-input="toggleChatInput"
-      @toggle-settings="showSettings = !showSettings"
+      @toggle-settings="showSettings = !showSettings; if (showSettings) showQuestions = false"
+      @toggle-questions="toggleQuestionsOverlay"
       @toggle-teleprompter="settings.teleprompterEnabled = !settings.teleprompterEnabled"
       @toggle-ws="toggleWs"
       @minimize="minimizeApp"
@@ -1357,6 +1397,15 @@ function closeApp() {
       @reset-to-defaults="resetToDefaults"
       @clear-messages="clearMessages"
       @close="showSettings = false"
+    />
+
+    <QuestionsOverlay
+      v-if="showQuestions"
+      :questions="questions"
+      :settings="settings"
+      :font-size="fontSize"
+      @update-questions="handleUpdateQuestions"
+      @close="showQuestions = false"
     />
 
     <Teleprompter

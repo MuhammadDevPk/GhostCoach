@@ -122,3 +122,56 @@ export async function fetchRemoteProfile({ settings, target = 'all' }) {
 
   return updates;
 }
+
+/**
+ * On-demand questions fetch service from remote Laravel server
+ * @param {Object} settings - App settings object
+ * @returns {Promise<Array>} Array of question objects: [{ id, title, description }, ...]
+ */
+export async function fetchRemoteQuestions(settings) {
+  const apiUrl = buildProfileApiUrl(settings, '/api/questions');
+
+  const response = await fetch(apiUrl, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json'
+    }
+  });
+
+  if (!response.ok) {
+    // If the endpoint is missing or returns an error, we check if the profile endpoint has it
+    // This provides graceful backward/fallback compatibility
+    try {
+      const profileUrl = buildProfileApiUrl(settings, '/api/profile');
+      const profileRes = await fetch(profileUrl, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+        if (profileData?.profile?.questions && Array.isArray(profileData.profile.questions)) {
+          return profileData.profile.questions;
+        }
+      }
+    } catch (e) {
+      console.warn('Fallback profile check for questions failed:', e);
+    }
+    
+    const errorData = await response.json().catch(() => ({}));
+    const msg = errorData.message || response.statusText || `HTTP ${response.status}`;
+    throw new Error(`Questions API Error: ${msg}`);
+  }
+
+  const data = await response.json();
+  
+  // Handle direct array, or nested success payload structures
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (data.status === 'success' && Array.isArray(data.questions)) {
+    return data.questions;
+  }
+  if (data.questions && Array.isArray(data.questions)) {
+    return data.questions;
+  }
+  throw new Error('Invalid or missing questions format from server.');
+}

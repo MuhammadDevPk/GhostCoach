@@ -102,8 +102,8 @@ describe('AppHeader.vue', () => {
       props: defaultProps
     });
 
-    // Config toggle is now the 6th button (crop button added, shifting it to index 5)
-    const configToggleBtn = wrapper.findAll('.btn-icon')[5];
+    // Config toggle is now the 7th button (index 6)
+    const configToggleBtn = wrapper.findAll('.btn-icon')[6];
     await configToggleBtn.trigger('click');
 
     expect(wrapper.emitted('toggle-settings')).toBeTruthy();
@@ -121,13 +121,25 @@ describe('AppHeader.vue', () => {
     expect(wrapper.emitted('trigger-crop')).toBeTruthy();
   });
 
+  it('emits toggle-questions on questions icon click', async () => {
+    const wrapper = mount(AppHeader, {
+      props: defaultProps
+    });
+
+    // Questions toggle is the 6th button (index 5)
+    const questionsToggleBtn = wrapper.findAll('.btn-icon')[5];
+    await questionsToggleBtn.trigger('click');
+
+    expect(wrapper.emitted('toggle-questions')).toBeTruthy();
+  });
+
   it('emits minimize on click', async () => {
     const wrapper = mount(AppHeader, {
       props: defaultProps
     });
 
-    // Minimize is now the 7th button (crop button added, shifting it to index 6)
-    const minBtn = wrapper.findAll('.btn-icon')[6];
+    // Minimize is now the 8th button (index 7)
+    const minBtn = wrapper.findAll('.btn-icon')[7];
     await minBtn.trigger('click');
 
     expect(wrapper.emitted('minimize')).toBeTruthy();
