@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue';
 import { parseResumeFile } from '../services/fileParser';
 import { fetchRemoteProfile } from '../services/profileSync';
+import KeyboardShortcuts from './KeyboardShortcuts.vue';
 
 const props = defineProps({
   settings: {
@@ -255,6 +256,14 @@ const handleRemoteSync = async (target = 'all') => {
         type="button"
       >
         Appearance
+      </button>
+      <button
+        class="tab-btn"
+        :class="{ 'active': activeSettingsTab === 'shortcuts' }"
+        @click="activeSettingsTab = 'shortcuts'"
+        type="button"
+      >
+        Shortcuts
       </button>
     </div>
 
@@ -657,6 +666,11 @@ const handleRemoteSync = async (target = 'all') => {
           <label>Teleprompter Background Opacity ({{ Math.round((localSettings.teleprompterBgOpacity ?? 0.95) * 100) }}%)</label>
           <input v-model.number="localSettings.teleprompterBgOpacity" type="range" min="0" max="1" step="0.05" style="width: 100%; height: 6px; border-radius: 3px; accent-color: var(--accent-color); cursor: pointer;" />
         </div>
+      </template>
+
+      <!-- Keyboard Shortcuts Tab Contents -->
+      <template v-else-if="activeSettingsTab === 'shortcuts'">
+        <KeyboardShortcuts />
       </template>
 
       <button class="btn-primary" @click="handleSave" type="button">Save & Apply</button>

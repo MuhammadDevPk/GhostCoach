@@ -124,5 +124,21 @@ describe('SettingsOverlay.vue', () => {
     expect(syncAllBtn.exists()).toBe(true);
     expect(syncAllBtn.text()).toContain('Fetch All');
   });
+
+  it('renders KeyboardShortcuts child component when Shortcuts tab is active', async () => {
+    const wrapper = mount(SettingsOverlay, {
+      props: defaultProps
+    });
+
+    // Shortcuts tab is the 5th button (index 4)
+    const tabButtons = wrapper.findAll('.tab-btn');
+    expect(tabButtons[4].text()).toBe('Shortcuts');
+    
+    await tabButtons[4].trigger('click');
+
+    // The KeyboardShortcuts component should be rendered, checking for its header text
+    expect(wrapper.text()).toContain('System-Wide Hotkeys');
+    expect(wrapper.text()).toContain('Cmd+Shift+L');
+  });
 });
 
