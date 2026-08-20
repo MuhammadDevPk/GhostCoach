@@ -32,7 +32,7 @@ const DEFAULT_SETTINGS = {
   teleprompterBgColor: '#191922',
   teleprompterBgOpacity: 0.95,
   teleprompterEnabled: true,  // auto-run on AI replies
-  wsEnabled: true             // WebSocket connection enabled state (can be toggled from header)
+  wsEnabled: false             // WebSocket connection enabled state (can be toggled from header)
 };
 
 // Define default AI settings
@@ -140,6 +140,7 @@ onMounted(() => {
         settings.value.port = '8080';
         settings.value.scheme = 'http';
         settings.value.appKey = 'app-key';
+        settings.value.wsEnabled = false;
         localStorage.setItem('reverb_settings', JSON.stringify(settings.value));
       }
     } catch (e) {
