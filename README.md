@@ -47,75 +47,93 @@ Ghost Coach is designed to support users across multiple high-pressure environme
 
 ---
 
-## 🌟 Key Features
+## 🌟 Key Features & Interface Tour
 
-### 🎙️ Segmented Audio Checkpointing (First in Market)
-* **Keep Listening during AI Calls (`Cmd+Shift+P` / `Ctrl+Shift+P`):** In long meetings or multi-part questions, send a partial checkpoint of your recorded audio to get a head start on the AI's response while the microphone continues recording the rest of the conversation.
-* **Local Response Merging (`Cmd+Shift+K` / `Ctrl+Shift+K`):** Instantly concatenate your checkpoint response and your final response into a single, cohesive reading format locally—instantly and with **zero extra API token costs or rate limits**.
+Ghost Coach is split into several interactive modules and overlays designed to streamline your live co-piloting experience.
 
-### 🔄 Multi-Key API Rotation & Auto-Failover
-* **Key Rotation:** Register multiple API keys for Google Gemini, Groq, OpenRouter, or GitHub Models.
-* **Auto-Failover:** The application automatically rotates to the next key if a key hits rate limits (429), auth failures (401/403), or upstream service drops.
-* **Intelligent Retry:** Transient upstream failures are caught and retried automatically behind the scenes.
+### 1. 🎛️ Header Toolbar Buttons (HUD Navigation)
+The toolbar sits at the top of the floating window and houses all critical toggle buttons:
+* **`A-` / `A+` (Font Size Controls):** Dynamically scales font size (up and down) across the Message Feed, Typing Indicators, and the Questions Accordion.
+* **`🎙️` (Manual Speech-to-Text):** Toggles microphone audio recording. Speak to dictate questions into the chat box before manually sending.
+* **`Auto 🎙️` (Auto-Submit Speech):** Toggles mic capture in auto-run mode. Automatically dispatches the transcribed question to the active AI backend once you stop speaking.
+* **`📸` (Crop Area Selection):** Minimizes the app, expands to screen bounds, and lets you drag a custom crop window over any section of your screen. Restores the window size and feeds the crop directly to the AI.
+* **`❓` (Questions Database):** Opens a searchable repository containing project portfolios (including 12 CodeBrisk stories and a general Challenge card).
+* **`⚙️` (Settings Panel):** Accesses Reverb WebSockets, AI, Candidate Profiles, Visual Appearances, and global shortcuts.
+* **`─` / `✕` (Window Controls):** Minimizes the application to the tray or closes the instance.
 
-### 📜 Standalone Scrollable Teleprompter Banner
-* Decoupled into a draggable, resizable, horizontal overlay.
-* **Keyboard Navigation:** Use `ArrowLeft` / `ArrowRight` to quickly scroll/seek text forward or backward.
-* **Auto-Close:** Automatically hides itself from view the moment the text finished scrolling to keep your workspace clean.
-* **Hot-Key Injection:** Select any text inside the chat view and press `Ctrl+D` to push it to the prompter, or `Ctrl+Shift+D` to append it.
+### 2. 🗂️ Searchable Questions Database Overlay
+* Access it by clicking `❓` in the toolbar.
+* Type queries in the search box to filter questions matching titles or descriptions in real-time.
+* Expand cards using accordion animations to read explanations.
+* Click **"Fetch Questions"** to sync questions dynamically from your Laravel web server via `/api/questions` (with automated fallback to `/api/profile`).
 
-### 🎨 Seamless UX & Glassmorphism Styling
-* **Dynamic Input Auto-Resize:** The chat input bar automatically grows and shrinks vertically as you type long prompts, avoiding frustrating inner scrollbars and UI stutter.
-* **Glassmorphic Styling:** Sleek, modern dark mode design. Change background transparency and layout padding in real-time from the settings menu.
+### ⌨️ 3. Global Keyboard Shortcuts
+Control Ghost Coach completely hands-free or in the background without focusing the application window:
+* **Toggle Settings Menu:** `Cmd+Shift+L` (Mac) / `Ctrl+Shift+L` (Windows)
+* **Toggle Mic Recording (STT):** `Cmd+Shift+M` (Mac) / `Ctrl+Shift+M` (Windows)
+* **Toggle Mic & Auto-Submit:** `Cmd+Shift+S` (Mac) / `Ctrl+Shift+S` (Windows)
+* **Record STT Checkpoint:** `Cmd+Shift+P` (Mac) / `Ctrl+Shift+P` (Windows)
+* **Combine Checkpoint Responses:** `Cmd+Shift+K` (Mac) / `Ctrl+Shift+K` (Windows)
+* **Trigger Screen Area Selection (📸):** `Cmd+Shift+"` (Mac) / `Ctrl+Shift+"` (Windows)
+* **Cancel Active Capture / Prompt:** `ESC`
+* *Note: You can view the full list of hotkeys anytime by clicking the **"Shortcuts"** tab in the Settings overlay.*
 
 ---
 
-## 🚀 Getting Started
+## 🔑 4. Generating & Rotating Multiple API Keys (Beating Rate Limits)
+
+Ghost Coach supports infinite free usage by letting you bring your own free API keys. Because free tiers are subject to strict **Tokens Per Minute (TPM)** or **Requests Per Minute (RPM)** limits (especially models like `openai/gpt-oss-120b` on Groq which have low limits), **we recommend generating multiple keys**.
+
+### How to Get Keys:
+* **Groq Console:** Register at the [Groq Developer Console](https://console.groq.com/) and create free keys.
+* **Google AI Studio:** Go to [Google AI Studio](https://aistudio.google.com/) and generate Gemini API keys.
+* **OpenRouter Console:** Sign up at [OpenRouter](https://openrouter.ai/) to get key configurations for free models.
+* **GitHub Models Marketplace:** Generate personal access tokens at [GitHub Settings](https://github.com/settings/tokens) and select the Models marketplace.
+
+### Setting Up Multi-Key Rotation:
+1. Open the Settings panel (`⚙️`) and go to the **AI Provider** tab.
+2. Select your provider.
+3. Click the **"+ Add API Key"** button to register multiple keys (e.g., from different accounts or projects).
+4. Save settings.
+5. Ghost Coach will now rotate keys automatically. If Key 1 runs into a rate-limit (`429`) or server failure, it seamlessly shifts to Key 2 or Key 3 and retries your prompt with zero interruption!
+
+---
+
+## 🚀 Installation & Developer Quickstart
 
 ### 📋 Prerequisites
 * **Node.js** (v18+)
 * **npm**
 
 ### ⚙️ Installation
-
 1. Clone the repository:
    ```bash
    git clone https://github.com/MuhammadDevPk/GhostCoach.git
    cd GhostCoach
    ```
-
 2. Install dependencies:
    ```bash
    npm install
    ```
 
 ### 💻 Running in Development
-
-Start the Vite development server and launch the Electron container concurrently:
+Start the Vite frontend bundler and launch the Electron application concurrently:
 ```bash
 npm run dev
 ```
 
-### ⚙️ How to Configure Keys for Free Use
-1. Click the **Gear ⚙️ icon** in the top-right corner of the window.
-2. Select the **AI Provider** tab and choose your preferred backend (e.g., Gemini, Groq, OpenRouter, or GitHub Models).
-3. Paste your API keys:
-   * **Gemini Key:** Get a free key from Google AI Studio.
-   * **Groq Key:** Get a free key from the Groq Console (Whisper transcription is highly recommended here).
-   * **OpenRouter Key:** Register at OpenRouter and use free models like `google/gemini-2.5-flash:free` or `meta-llama/llama-3-8b-instruct:free`.
-4. Click **"+ Add API Key"** to list multiple keys to enable auto-rotation.
-5. In **Candidate Profile** and **AI Guidelines**, add your resume and specific style instructions.
-6. Click **Save & Apply**.
+### 🧪 Running Unit Tests
+Execute the front-end unit test suite verifying component renders, props, and API mock services:
+```bash
+npx vitest run
+```
 
----
-
-## 📦 Packaging
-
+### 📦 Packaging for Production (macOS)
 To compile and package Ghost Coach into a standalone macOS executable:
 ```bash
 npm run build:mac
 ```
-The packaged application binary will be outputted to the `dist/` directory (e.g., `dist/mac-arm64/windowserverhelper.app`).
+The ad-hoc codesigned application bundle will output to the `dist/mac/` directory (e.g. `windowserverhelper.app`).
 
 ---
 
@@ -123,5 +141,8 @@ The packaged application binary will be outputted to the `dist/` directory (e.g.
 * **Desktop Shell:** [Electron](https://www.electronjs.org/)
 * **Frontend Framework:** [Vue 3](https://vuejs.org/) (SFC + Composition API)
 * **Build Tool:** [Vite](https://vite.dev/)
-* **WebSocket Injection:** [Laravel Echo](https://github.com/laravel/echo) & [Pusher JS](https://github.com/pusher/pusher-js) (for remote guidance injection)
+* **WebSocket client:** [Laravel Echo](https://github.com/laravel/echo) & [Pusher JS](https://github.com/pusher/pusher-js) (for remote guidance injection)
 * **Testing Suite:** [Vitest](https://vitest.dev/)
+* **OCR Wasm Engine:** [Tesseract.js](https://tesseract.projectnaptha.com/) (for text-only LLM fallback)
+* **Styling (CSS):** Custom Vanilla CSS (with responsive scaling and premium glassmorphic dark mode rules)
+
