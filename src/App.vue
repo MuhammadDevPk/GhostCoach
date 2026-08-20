@@ -196,8 +196,8 @@ onMounted(() => {
   if (savedQuestions) {
     try {
       const parsed = JSON.parse(savedQuestions);
-      // Auto-migrate if the user has the old static default questions list
-      if (Array.isArray(parsed) && parsed.length > 0 && parsed[0]?.title === 'Tell me about yourself.') {
+      // Auto-migrate if the user has the old static default questions lists
+      if (Array.isArray(parsed) && parsed.length > 0 && (parsed[0]?.title === 'Tell me about yourself.' || parsed[0]?.title === 'Deduction Management System')) {
         questions.value = [...DEFAULT_QUESTIONS];
         localStorage.setItem('interview_questions', JSON.stringify(DEFAULT_QUESTIONS));
       } else {

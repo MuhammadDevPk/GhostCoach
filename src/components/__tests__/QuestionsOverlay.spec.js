@@ -83,4 +83,77 @@ describe('QuestionsOverlay.vue', () => {
 
     expect(wrapper.find('div[style*="rgba(16, 185, 129"]').text()).toContain('Successfully synced 1 questions');
   });
+
+  it('allows adding a custom question', async () => {
+    const wrapper = mount(QuestionsOverlay, {
+      props: defaultProps
+    });
+
+    // Initially form is hidden
+    expect(wrapper.find('.crud-form-card').exists()).toBe(false);
+
+    // Click Add Custom Question
+    const addBtn = wrapper.find('.crud-header-actions button');
+    await addBtn.trigger('click');
+
+    expect(wrapper.find('.crud-form-card').exists()).toBe(true);
+
+    // Fill inputs
+    const inputs = wrapper.findAll('.crud-form-card .question-search-input');
+    await inputs[0].setValue('New Query?');
+    await inputs[1].setValue('Answer description goes here.');
+
+    // Save
+    const saveBtn = wrapper.find('.crud-form-card .btn-sync-all');
+    await saveBtn.trigger('click');
+
+    const updateEmitted = wrapper.emitted('update-questions');
+    expect(updateEmitted).toBeTruthy();
+    expect(updateEmitted[0][0].length).toBe(3);
+    expect(updateEmitted[0][0][2].title).toBe('New Query?');
+  });
+
+  it('allows editing a custom question', async () => {
+    const wrapper = mount(QuestionsOverlay, {
+      props: defaultProps
+    });
+
+    // Expand the first card to see Edit button
+    await wrapper.find('.question-card-header').trigger('click');
+
+    const editBtn = wrapper.find('.question-card-body .btn-text-action');
+    await editBtn.trigger('click');
+
+    // Should render edit view card
+    expect(wrapper.find('.edit-mode-card').exists()).toBe(true);
+
+    const editTitleInput = wrapper.find('.edit-mode-card input');
+    await editTitleInput.setValue('Updated Vue?');
+
+    const saveChangesBtn = wrapper.find('.edit-mode-card .btn-sync-all');
+    await saveChangesBtn.trigger('click');
+
+    const updateEmitted = wrapper.emitted('update-questions');
+    expect(updateEmitted).toBeTruthy();
+    expect(updateEmitted[0][0][0].title).toBe('Updated Vue?');
+  });
+
+  it('allows deleting a custom question', async () => {
+    window.confirm = vi.fn().mockReturnValueOnce(true);
+
+    const wrapper = mount(QuestionsOverlay, {
+      props: defaultProps
+    });
+
+    // Expand the first card to see Delete button
+    await wrapper.find('.question-card-header').trigger('click');
+
+    const deleteBtn = wrapper.findAll('.question-card-body .btn-text-action')[1];
+    await deleteBtn.trigger('click');
+
+    expect(window.confirm).toHaveBeenCalled();
+    const updateEmitted = wrapper.emitted('update-questions');
+    expect(updateEmitted).toBeTruthy();
+    expect(updateEmitted[0][0].length).toBe(1); // 2 original, 1 deleted
+  });
 });

@@ -27,6 +27,15 @@ const expandedQuestionIds = ref(new Set());
 const isSyncing = ref(false);
 const syncStatus = ref({ text: '', isError: false });
 
+// CRUD States
+const isAdding = ref(false);
+const newTitle = ref('');
+const newDescription = ref('');
+
+const editingId = ref(null);
+const editTitle = ref('');
+const editDescription = ref('');
+
 // Live reactive matching on title/question
 const filteredQuestions = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
@@ -38,6 +47,7 @@ const filteredQuestions = computed(() => {
 });
 
 function toggleQuestion(id) {
+  if (editingId.value === id) return; // Prevent collapse while editing
   if (expandedQuestionIds.value.has(id)) {
     expandedQuestionIds.value.delete(id);
   } else {
@@ -49,6 +59,60 @@ function expandAll() {
   filteredQuestions.value.forEach(q => {
     expandedQuestionIds.value.add(q.id);
   });
+}
+
+// CRUD Handlers
+function addQuestion() {
+  if (!newTitle.value.trim()) return;
+  const newArray = [
+    ...props.questions,
+    {
+      id: Date.now(),
+      title: newTitle.value.trim(),
+      description: newDescription.value.trim()
+    }
+  ];
+  emit('update-questions', newArray);
+  newTitle.value = '';
+  newDescription.value = '';
+  isAdding.value = false;
+  syncStatus.value = { text: 'Custom question added successfully.', isError: false };
+}
+
+function startEdit(q) {
+  editingId.value = q.id;
+  editTitle.value = q.title;
+  editDescription.value = q.description;
+  expandedQuestionIds.value.add(q.id); // Ensure expanded
+}
+
+function saveEdit(id) {
+  if (!editTitle.value.trim()) return;
+  const newArray = props.questions.map(q => 
+    q.id === id ? { ...q, title: editTitle.value.trim(), description: editDescription.value.trim() } : q
+  );
+  emit('update-questions', newArray);
+  editingId.value = null;
+  syncStatus.value = { text: 'Question updated successfully.', isError: false };
+}
+
+function cancelEdit() {
+  editingId.value = null;
+}
+
+function deleteQuestion(id) {
+  if (confirm('Are you sure you want to delete this question?')) {
+    const newArray = props.questions.filter(q => q.id !== id);
+    emit('update-questions', newArray);
+    syncStatus.value = { text: 'Question deleted successfully.', isError: false };
+  }
+}
+
+function clearAllQuestions() {
+  if (confirm('Are you sure you want to delete all custom questions?')) {
+    emit('update-questions', []);
+    syncStatus.value = { text: 'All questions cleared.', isError: false };
+  }
 }
 
 function collapseAll() {
@@ -113,7 +177,7 @@ async function triggerQuestionsSync() {
     </div>
 
     <!-- Sync status banner -->
-    <div v-if="syncStatus.text" style="padding: 8px 12px; border-radius: 6px; font-size: 11px; display: flex; justify-content: space-between; align-items: center;" :style="{ background: syncStatus.isError ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)', color: syncStatus.isError ? '#ef4444' : '#10b981', border: syncStatus.isError ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)' }">
+    <div v-if="syncStatus.text" style="padding: 8px 12px; border-radius: 6px; font-size: 11px; display: flex; justify-content: space-between; align-items: center; margin-top: 4px;" :style="{ background: syncStatus.isError ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)', color: syncStatus.isError ? '#ef4444' : '#10b981', border: syncStatus.isError ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)' }">
       <span>{{ syncStatus.text }}</span>
       <button @click="syncStatus.text = ''" style="background: transparent; border: none; color: inherit; cursor: pointer; font-weight: bold;" type="button">✕</button>
     </div>
@@ -138,6 +202,42 @@ async function triggerQuestionsSync() {
         <button @click="expandAll" class="btn-text-action" type="button">Expand All</button>
         <span class="action-divider">|</span>
         <button @click="collapseAll" class="btn-text-action" type="button">Collapse All</button>
+        <span v-if="questions.length > 0" class="action-divider">|</span>
+        <button v-if="questions.length > 0" @click="clearAllQuestions" class="btn-text-action" style="color: #ef4444;" type="button">Clear All</button>
+      </div>
+    </div>
+
+    <!-- Togglable Add Form -->
+    <div class="crud-header-actions" style="margin-top: 8px;">
+      <button 
+        v-if="!isAdding" 
+        @click="isAdding = true" 
+        class="btn-sync-all" 
+        style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 11px; padding: 5px 12px; border-radius: 6px; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 4px;"
+        type="button"
+      >
+        <span>+ Add Custom Question</span>
+      </button>
+      
+      <div v-else class="crud-form-card" style="background: rgba(255, 255, 255, 0.03); border: 1px dashed rgba(255, 255, 255, 0.15); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="font-size: 11px; font-weight: 600; color: var(--accent-color, #3b82f6); text-transform: uppercase;">New Question Details</div>
+        <input 
+          v-model="newTitle" 
+          type="text" 
+          placeholder="Question Title / Topic" 
+          class="question-search-input" 
+          style="padding-left: 10px;"
+        />
+        <textarea 
+          v-model="newDescription" 
+          placeholder="Answer / Talking Points / Description" 
+          class="question-search-input" 
+          style="padding-left: 10px; min-height: 60px; font-family: inherit; resize: vertical;"
+        ></textarea>
+        <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+          <button @click="isAdding = false" class="btn-text-action" style="color: var(--text-muted);" type="button">Cancel</button>
+          <button @click="addQuestion" class="btn-sync-all" style="background: var(--accent-color, #3b82f6); color: #fff; border: none; padding: 4px 12px; border-radius: 6px; font-size: 11px; cursor: pointer;" type="button">Save Question</button>
+        </div>
       </div>
     </div>
 
@@ -158,24 +258,54 @@ async function triggerQuestionsSync() {
           class="question-card"
           :class="{ 'is-expanded': expandedQuestionIds.has(q.id) }"
         >
-          <!-- Accordion Header (Question Title) -->
-          <div class="question-card-header" @click="toggleQuestion(q.id)">
-            <div class="question-title-section">
-              <span class="badge-prefix">Q.</span>
-              <h4 class="question-title" :style="{ fontSize: (fontSize - 1.5) + 'px' }">{{ q.title }}</h4>
-            </div>
-            <div class="toggle-indicator">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
+          <!-- Editing View -->
+          <div v-if="editingId === q.id" class="edit-mode-card" style="padding: 12px; display: flex; flex-direction: column; gap: 8px;" @click.stop>
+            <div style="font-size: 11px; font-weight: 600; color: var(--accent-color, #3b82f6); text-transform: uppercase;">Edit Question Details</div>
+            <input 
+              v-model="editTitle" 
+              type="text" 
+              class="question-search-input" 
+              style="padding-left: 10px;"
+            />
+            <textarea 
+              v-model="editDescription" 
+              class="question-search-input" 
+              style="padding-left: 10px; min-height: 65px; font-family: inherit; resize: vertical;"
+            ></textarea>
+            <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+              <button @click="cancelEdit" class="btn-text-action" style="color: var(--text-muted);" type="button">Cancel</button>
+              <button @click="saveEdit(q.id)" class="btn-sync-all" style="background: var(--accent-color, #3b82f6); color: #fff; border: none; padding: 4px 12px; border-radius: 6px; font-size: 11px; cursor: pointer;" type="button">Save Changes</button>
             </div>
           </div>
 
-          <!-- Accordion Content (Description) -->
-          <div class="question-card-body">
-            <div class="body-label">Description</div>
-            <p class="question-description" :style="{ fontSize: (fontSize - 2.5) + 'px' }">{{ q.description }}</p>
-          </div>
+          <!-- Normal Accordion View -->
+          <template v-else>
+            <!-- Accordion Header (Question Title) -->
+            <div class="question-card-header" @click="toggleQuestion(q.id)">
+              <div class="question-title-section">
+                <span class="badge-prefix">Q.</span>
+                <h4 class="question-title" :style="{ fontSize: (fontSize - 1.5) + 'px' }">{{ q.title }}</h4>
+              </div>
+              <div class="toggle-indicator">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Accordion Content (Description) -->
+            <div class="question-card-body">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <div class="body-label">Description</div>
+                <div style="display: flex; gap: 8px;">
+                  <button @click.stop="startEdit(q)" class="btn-text-action" style="font-size: 10px; padding: 0; color: #38bdf8;" type="button">Edit</button>
+                  <span style="opacity: 0.3; color: var(--border-color);">|</span>
+                  <button @click.stop="deleteQuestion(q.id)" class="btn-text-action" style="font-size: 10px; padding: 0; color: #ef4444;" type="button">Delete</button>
+                </div>
+              </div>
+              <p class="question-description" :style="{ fontSize: (fontSize - 2.5) + 'px' }">{{ q.description }}</p>
+            </div>
+          </template>
         </div>
       </div>
     </div>
