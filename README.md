@@ -61,11 +61,15 @@ The toolbar sits at the top of the floating window and houses all critical toggl
 * **`⚙️` (Settings Panel):** Accesses Reverb WebSockets, AI, Candidate Profiles, Visual Appearances, and global shortcuts.
 * **`─` / `✕` (Window Controls):** Minimizes the application to the tray or closes the instance.
 
-### 2. 🗂️ Searchable Questions Database Overlay
-* Access it by clicking `❓` in the toolbar.
-* Type queries in the search box to filter questions matching titles or descriptions in real-time.
-* Expand cards using accordion animations to read explanations.
-* Click **"Fetch Questions"** to sync questions dynamically from your Laravel web server via `/api/questions` (with automated fallback to `/api/profile`).
+### 2. 🗂️ Predefined Questions Database (CRUD Enabled)
+* **Access Panel:** Click the `❓` icon in the toolbar to open the Questions Database.
+* **Search Filtering:** Type queries in the search input box to instantly filter questions matching titles or answers in real-time.
+* **Expand & Collapse Accordions:** Expand questions to read answers and detailed talking points. Use the top utility buttons to *Expand All*, *Collapse All*, or *Clear All* custom questions.
+* **Inline CRUD Operations:**
+  * **Add Question:** Click the green **`+ Add Custom Question`** button at the top, fill in the Question and Answer fields, and click Save.
+  * **Edit Question:** Expand any question and click the blue **`Edit`** button. Make your modifications inline and click Save.
+  * **Delete Question:** Expand any question and click the red **`Delete`** button to remove it.
+* **Remote Syncing:** Click **"Fetch Questions"** to sync questions dynamically from your Laravel web server via `GET /api/questions` (with automated fallback to `/api/profile`). Synced items are cached to local storage.
 
 ### ⌨️ 3. Global Keyboard Shortcuts
 Control Ghost Coach completely hands-free or in the background without focusing the application window:
