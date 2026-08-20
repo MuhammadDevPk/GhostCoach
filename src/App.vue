@@ -38,7 +38,7 @@ const DEFAULT_SETTINGS = {
 // Define default AI settings
 const DEFAULT_AI_SETTINGS = {
   enabled: true,
-  provider: 'gemini',
+  provider: 'groq',
   geminiModel: 'gemini-2.5-flash',
   groqModel: 'openai/gpt-oss-120b',
   openrouterModel: 'google/gemini-2.5-flash',
@@ -162,7 +162,6 @@ onMounted(() => {
       console.error('Failed to parse saved AI settings', e);
     }
   }
-
   // Normalize string keys into arrays for rotation compatibility
   ['geminiKey', 'groqKey', 'openrouterKey', 'githubKey'].forEach(key => {
     if (typeof aiSettings.value[key] === 'string') {
@@ -171,6 +170,12 @@ onMounted(() => {
       aiSettings.value[key] = [''];
     }
   });
+
+  // Auto-migrate default provider to groq if they haven't configured their Gemini keys yet
+  if (aiSettings.value.provider === 'gemini' && (!aiSettings.value.geminiKey || aiSettings.value.geminiKey.length === 0 || aiSettings.value.geminiKey[0] === '')) {
+    aiSettings.value.provider = 'groq';
+    localStorage.setItem('ai_settings', JSON.stringify(aiSettings.value));
+  }
 
   const savedActiveMode = localStorage.getItem('active_mode');
   if (savedActiveMode) {
