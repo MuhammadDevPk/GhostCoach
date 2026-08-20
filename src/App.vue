@@ -20,11 +20,11 @@ window.Pusher = Pusher;
 
 // Define default Reverb configuration
 const DEFAULT_SETTINGS = {
-  host: 'ws.helper-ext.larawork.com',
-  port: '443',                 // WebSocket Reverb port
+  host: 'localhost',
+  port: '8080',                 // WebSocket Reverb port
   apiPort: '8000',             // Web API HTTP port (Laravel Web Server)
-  appKey: 'datgek4pdi3rxen8drie',
-  scheme: 'https',
+  appKey: 'app-key',
+  scheme: 'http',
   channel: 'interview',
   event: '.guidance.created', // Prepend dot to listen to custom event literally (prevents Echo namespace prefixing)
   appBgColor: '#0e0e12',
@@ -47,7 +47,18 @@ const DEFAULT_AI_SETTINGS = {
   groqKey: [''],
   openrouterKey: [''],
   githubKey: [''],
-  systemInstruction: 'your role is to answer human like interview questions. I will share questions and you will only provide interview answers. and nothing more.',
+  systemInstruction: `Rules to follow while generating response.
+1: Response should be in the form of paragraph without any heading or bullet points
+2: Follow humanizer guide to provide humanized answers
+3: Always only provide exact answers. don't generate any irrelevant thinking
+4: Provide only short responses
+5: don't repeat anything in responses
+6: Generate concise, technically sound, and professionally worded responses
+7: Include brief, relevant examples from my experience when useful
+8. Quantify your achievements with specific metrics to highlight your impact.
+9. Structure your responses to challenging trade-offs by clearly outlining options, factors, and outcomes.
+
+Be concise max 3 to 4 lines, focused, confident, and professional. Focus on clarity, accuracy, and practical experience over theory. Use short bullet points or structured explanations when helpful. Include brief, realistic examples (e.g., Laravel API, React optimization). Avoid filler or self-references — provide only the polished, interview-ready answer`,
   persona: '',
   resumeText: '',
   resumeFileName: ''
@@ -123,6 +134,14 @@ onMounted(() => {
   if (savedSettings) {
     try {
       settings.value = { ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) };
+      // Auto-migrate old remote Reverb host to new localhost defaults
+      if (settings.value.host === 'ws.helper-ext.larawork.com') {
+        settings.value.host = 'localhost';
+        settings.value.port = '8080';
+        settings.value.scheme = 'http';
+        settings.value.appKey = 'app-key';
+        localStorage.setItem('reverb_settings', JSON.stringify(settings.value));
+      }
     } catch (e) {
       console.error('Failed to parse saved settings', e);
     }
@@ -132,6 +151,12 @@ onMounted(() => {
   if (savedAiSettings) {
     try {
       aiSettings.value = { ...DEFAULT_AI_SETTINGS, ...JSON.parse(savedAiSettings) };
+      // Auto-migrate old default AI system instruction to the new refined ruleset
+      const oldDefaultInstruction = 'your role is to answer human like interview questions. I will share questions and you will only provide interview answers. and nothing more.';
+      if (aiSettings.value.systemInstruction === oldDefaultInstruction) {
+        aiSettings.value.systemInstruction = DEFAULT_AI_SETTINGS.systemInstruction;
+        localStorage.setItem('ai_settings', JSON.stringify(aiSettings.value));
+      }
     } catch (e) {
       console.error('Failed to parse saved AI settings', e);
     }
